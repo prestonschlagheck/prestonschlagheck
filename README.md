@@ -9,13 +9,13 @@
 
 ## Hey, I'm Preston 👋
 
-<small>I'm Head of Product at [Mano Wellness](https://manowellness.co). We built Manny, an AI health coach on [iPhone](https://apps.apple.com/us/app/mano-wellness/id6783495822) and the [web](https://manowellness.app) that reads your wearables, sleep and nutrition. It's live with 4+ corporate clients.</small>
+<small>I'm Head of Product at [Mano Wellness](https://manowellness.app). We built Manny, an AI health coach on [iPhone](https://apps.apple.com/us/app/manny-your-personal-trainer/id6783495822) and the [web](https://manowellness.app) that reads your wearables, sleep and nutrition. It's live with 4+ corporate clients.</small>
 
 <small>I'm also a full-time finance student at South Carolina, so most of this gets built at night. The chart counts private repos too.</small>
 
 #### Experience
 
-- <small>Head of Product @ [Mano Wellness](https://manowellness.co) (AI health coach on iOS and web, 4+ corporate clients)</small>
+- <small>Head of Product @ [Mano Wellness](https://manowellness.app) (AI health coach on iOS and web, 4+ corporate clients)</small>
 - <small>Co-founder & Lead Engineer @ [Diffuse](https://www.diffuse.press) (AI newsroom, 26k+ monthly pageviews, profitable in 4 months)</small>
 - <small>Co-founder @ [CogNodes](https://cognodes.com) (AI agents and production builds for 8 paying clients)</small>
 - <small>AI Strategy & Automations @ [Direct Journeyline Holdings](https://www.directjh.com) (10+ hours a week saved on month-end)</small>
@@ -27,10 +27,3 @@
 - <small>President @ Sigma Phi Epsilon, SC Alpha (230+ members)</small>
 - <small>Finance + Business Analytics @ University of South Carolina '28</small>
 
-#### Building with
-
-<small>TypeScript · Swift · Next.js · Supabase · Cloudflare Workers · Claude + OpenAI APIs</small>
-
-<br>
-
-<p><a href="https://github.com/prestonschlagheck/agentic-imessage-demo"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/prestonschlagheck/prestonschlagheck/output/featured-1-dark.svg"><img alt="Agentic iMessage demo: Texts, calls you, reads your Gmail" src="https://raw.githubusercontent.com/prestonschlagheck/prestonschlagheck/output/featured-1-light.svg" height="32"></picture></a></p>
