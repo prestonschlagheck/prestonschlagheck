@@ -3,7 +3,7 @@
   "fullName": "Preston Schlagheck",
   "ticker": "PRES",
   "intro": [
-    "I'm Head of Product at [Mano Wellness](https://manowellness.co). We built Manny, an AI health coach on [iPhone](https://apps.apple.com/us/app/mano-wellness/id6783495822) and the [web](https://manowellness.app) that reads your wearables, sleep and nutrition. It's live with 4+ corporate clients.",
+    "I'm Head of Product at [Mano Wellness](https://manowellness.app). We built Manny, an AI health coach on [iPhone](https://apps.apple.com/us/app/manny-your-personal-trainer/id6783495822) and the [web](https://manowellness.app) that reads your wearables, sleep and nutrition. It's live with 4+ corporate clients.",
     "I'm also a full-time finance student at South Carolina, so most of this gets built at night. The chart counts private repos too."
   ],
   "socials": {
@@ -14,7 +14,7 @@
   },
   "sections": {
     "Experience": [
-      "Head of Product @ [Mano Wellness](https://manowellness.co) (AI health coach on iOS and web, 4+ corporate clients)",
+      "Head of Product @ [Mano Wellness](https://manowellness.app) (AI health coach on iOS and web, 4+ corporate clients)",
       "Co-founder & Lead Engineer @ [Diffuse](https://www.diffuse.press) (AI newsroom, 26k+ monthly pageviews, profitable in 4 months)",
       "Co-founder @ [CogNodes](https://cognodes.com) (AI agents and production builds for 8 paying clients)",
       "AI Strategy & Automations @ [Direct Journeyline Holdings](https://www.directjh.com) (10+ hours a week saved on month-end)",
@@ -25,20 +25,5 @@
       "President @ Sigma Phi Epsilon, SC Alpha (230+ members)",
       "Finance + Business Analytics @ University of South Carolina '28"
     ]
-  },
-  "stack": [
-    "TypeScript",
-    "Swift",
-    "Next.js",
-    "Supabase",
-    "Cloudflare Workers",
-    "Claude + OpenAI APIs"
-  ],
-  "featured": [
-    {
-      "repo": "prestonschlagheck/agentic-imessage-demo",
-      "label": "Agentic iMessage demo",
-      "desc": "Texts, calls you, reads your Gmail"
-    }
-  ]
+  }
 }

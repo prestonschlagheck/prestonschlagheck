@@ -1,5 +1,5 @@
-// Draws the profile: README.md from profile.json, plus its images (social pills, the contribution
-// ticker, featured repo pills) in light and dark, written to dist/. The workflow publishes dist/ to
+// Draws the profile: README.md from profile.json, plus its images (social pills and the contribution
+// ticker) in light and dark, written to dist/. The workflow publishes dist/ to
 // the `output` branch, which the README points at. Node 20+, no dependencies.
 //
 //   LOGIN=prestonschlagheck GITHUB_TOKEN=$(gh auth token) node .profile/render.mjs
@@ -18,6 +18,7 @@ const THEMES = {
 	light: { ink: '#1f2328', muted: '#656d76', rule: '#1f2328', ruleOp: 0.14, chip: '#f6f8fa', edge: '#1f2328', edgeOp: 0.12 },
 };
 const GAIN = { dark: '#00c805', light: '#00a804' };
+const LOSS = '#ff5000';
 
 const fmt = (n) => n.toLocaleString('en-US');
 const esc = (s) =>
@@ -89,135 +90,161 @@ function stats(days) {
 
 // ---- Ticker -----------------------------------------------------------------------------------
 
-// Robinhood's stock page, with lifetime contributions as the share price. The price only goes up,
-// so each range tab is about how steep the climb is. The chart draws in, then walks through the
-// range tabs, morphing the line between them, and loops.
+// Robinhood's stock page, played as a loop. For each range a dot draws the line left to right while
+// the count and the change against the period before tick up with it, then the next range starts.
+// Everything is SMIL on one shared clock, so it runs inside GitHub's <img> with no script.
 const RANGES = [
-	{ tab: '1W', days: 7, label: 'Past week' },
-	{ tab: '1M', days: 30, label: 'Past month' },
-	{ tab: '3M', days: 91, label: 'Past 3 months' },
-	{ tab: 'YTD', days: null, label: 'Year to date' },
-	{ tab: '1Y', days: 365, label: 'Past year' },
-	{ tab: 'ALL', days: Infinity, label: 'All time' },
+	{ tab: '1M', days: 30, smooth: 1, versus: 'vs previous month' },
+	{ tab: '3M', days: 91, smooth: 3, versus: 'vs previous 3 months' },
+	{ tab: '6M', days: 182, smooth: 5, versus: 'vs previous 6 months' },
+	{ tab: '1Y', days: 365, smooth: 7, versus: 'vs previous year' },
 ];
-// Opens on ALL, the whole climb, then tours the shorter ranges and comes back.
-const ORDER = [5, 0, 1, 2, 3, 4];
-const HOLD = 2.6, HOLD_FIRST = 4.2, MORPH = 0.9, INTRO = 2.4;
-const N = 160;
+const DRAW = 3.4, HOLD = 2.2, FADE = 0.45; // seconds per range
+const FRAMES = 60; // count updates per draw
 
 function ticker(theme, profile, cal) {
 	const t = THEMES[theme];
 	const gain = GAIN[theme];
-	const W = 880, H = 448, padX = 2;
-	const top = 150, bottom = 318;
-	const { days, total } = cal;
+	const W = 880, H = 430, top = 156, bottom = 318;
+	const { days } = cal;
 	const s = stats(days);
+	const slot = DRAW + HOLD + FADE;
+	const T = slot * RANGES.length;
+	const kt = (sec) => Math.min(1, Math.max(0, sec / T)).toFixed(5);
+	const sum = (a, b) => days.slice(Math.max(0, a), Math.max(0, b)).reduce((n, d) => n + d.count, 0);
 
-	// cum[i] is the price at the close of day i; cum[-1] (the open before day 0) is 0.
-	const cum = [];
-	days.reduce((n, d, i) => (cum[i] = n + d.count), 0);
-	const at = (i) => (i < 0 ? 0 : cum[Math.min(i, cum.length - 1)]);
-	const jan1 = days.findIndex((d) => d.date >= `${new Date().getUTCFullYear()}-01-01`);
-
-	const ranges = RANGES.map((r) => {
-		const span = r.days === null ? days.length - Math.max(0, jan1) : Math.min(r.days, days.length);
-		const start = days.length - span; // first day inside the range
-		const open = at(start - 1), close = at(days.length - 1);
-		const lo = open, hi = Math.max(close, open + 1);
-		// Resample to N points so every range's path has the same commands and SMIL can morph them.
-		const pts = [];
-		for (let k = 0; k < N; k++) {
-			const f = (k / (N - 1)) * span; // days elapsed since the open
-			const i = start - 1 + f;
-			const a = at(Math.floor(i)), b = at(Math.ceil(i));
-			const v = a + (b - a) * (i - Math.floor(i));
-			pts.push([padX + (k / (N - 1)) * (W - padX * 2), bottom - ((v - lo) / (hi - lo)) * (bottom - top)]);
-		}
+	const ranges = RANGES.map((r, k) => {
+		const span = Math.min(r.days, days.length);
+		const start = days.length - span;
+		const total = sum(start, days.length);
+		const prev = sum(start - r.days, start);
+		const pct = prev > 0 ? Math.round(((total - prev) / prev) * 100) : null;
+		// Trailing r.smooth-day total per day. Plotted point to point, so it stays jagged.
+		const series = days.slice(start).map((_, i) => sum(start + i - r.smooth + 1, start + i + 1));
+		const max = Math.max(1, ...series);
+		const pts = series.map((v, i) => [(i / Math.max(1, span - 1)) * W, bottom - (v / max) * (bottom - top)]);
+		// Cumulative count and cumulative path length at each point, so the counter and the dot
+		// both track the line's x position rather than time or arc length.
+		const cum = [], len = [0];
+		series.forEach((_, i) => (cum[i] = (cum[i - 1] ?? 0) + days[start + i].count));
+		for (let i = 1; i < pts.length; i++) len[i] = len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+		const L = len.at(-1) || 1;
+		const at = (f, arr) => {
+			const x = f * (pts.length - 1), i = Math.floor(x), j = Math.min(i + 1, pts.length - 1);
+			return arr[i] + (arr[j] - arr[i]) * (x - i);
+		};
+		const frames = Array.from({ length: FRAMES + 1 }, (_, j) => {
+			const f = j / FRAMES;
+			const count = j === FRAMES ? total : Math.round(at(f, cum));
+			return { f, count, pct: pct === null ? null : Math.round((pct * count) / Math.max(1, total)), len: at(f, len) / L };
+		});
 		const d = 'M' + pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L');
-		const change = close - open;
-		const pct = open > 0 ? (change / open) * 100 : null;
-		return { ...r, d, change, pct };
+		return { ...r, k, t0: k * slot, total, pct, d, frames, end: pts.at(-1) };
 	});
 
-	// One timeline for every animated attribute: hold, morph, hold, morph... back to the first range.
-	const marks = [0];
-	ORDER.forEach((_, j) => {
-		marks.push(marks.at(-1) + (j === 0 ? HOLD_FIRST : HOLD));
-		marks.push(marks.at(-1) + MORPH);
-	});
-	const T = marks.at(-1);
-	const keyTimes = marks.map((m) => (m / T).toFixed(4)).join(';');
-	// Value at each mark: mark 2j..2j+1 is the hold on ORDER[j]; the last mark is back on ORDER[0].
-	const seq = (f) => marks.map((_, m) => f(ORDER[m === marks.length - 1 ? 0 : Math.floor(m / 2)])).join(';');
-	const splines = marks.slice(1).map((_, m) => (m % 2 ? '.45 0 .15 1' : '0 0 1 1')).join(';');
-	const anim = (attr, values, extra = '') =>
-		`<animate attributeName="${attr}" values="${values}" keyTimes="${keyTimes}" calcMode="spline" keySplines="${splines}" dur="${T}s" begin="${INTRO}s" repeatCount="indefinite"${extra}/>`;
-	const first = ranges[ORDER[0]];
+	// Visible for its own slot only. Keyframes are nudged apart so no two land on the same time.
+	const showing = (r) => {
+		const a = r.t0, b = r.t0 + DRAW + HOLD, c = b + FADE;
+		const keys = r.k === 0 ? [[0, 1], [b, 1], [c, 0], [T, 0]] : [[0, 0], [a - 0.001, 0], [a, 1], [b, 1], [c, 0], [T, 0]];
+		return `<animate attributeName="opacity" values="${keys.map((x) => x[1]).join(';')}" keyTimes="${keys.map((x) => kt(x[0])).join(';')}" dur="${T}s" repeatCount="indefinite"/>`;
+	};
+	// A discrete track: value v0 before the draw, then one value per frame across the draw.
+	const track = (r, attr, v0, at, type) => {
+		const keys = [[0, v0], ...(r.t0 > 0 ? [[r.t0 - 0.001, v0]] : []), ...r.frames.map((fr) => [r.t0 + fr.f * DRAW, at(fr)])];
+		keys.push([T, keys.at(-1)[1]]);
+		const tag = type ? `animateTransform attributeName="transform" type="${type}"` : `animate attributeName="${attr}"`;
+		return `<${tag} values="${keys.map((x) => x[1]).join(';')}" keyTimes="${keys.map((x) => kt(x[0])).join(';')}" calcMode="discrete" dur="${T}s" repeatCount="indefinite"/>`;
+	};
 
-	// Price: an odometer per digit that rolls up from zero on load.
-	const size = 44, lh = size * 1.25, dw = size * 0.6, cw = size * 0.28, baseY = 104;
-	let x = 0;
-	const odometer = [...fmt(total)]
-		.map((c, i) => {
-			if (!/\d/.test(c)) {
-				const out = `<text x="${(x + cw / 2).toFixed(1)}" y="${baseY}" text-anchor="middle">${c}</text>`;
-				x += cw;
-				return out;
-			}
-			const n = 10 + Number(c);
-			const col = Array.from({ length: n + 1 }, (_, k) => `<text x="${(dw / 2).toFixed(1)}" y="${(size * 0.98 + k * lh).toFixed(1)}" text-anchor="middle">${k % 10}</text>`).join('');
-			const out = `<svg x="${x.toFixed(1)}" y="${(baseY - size * 0.98).toFixed(1)}" width="${dw.toFixed(1)}" height="${(lh).toFixed(1)}"><g transform="translate(0 ${(-n * lh).toFixed(1)})" style="--to:${(-n * lh).toFixed(1)}px;animation-delay:${(0.1 + i * 0.07).toFixed(2)}s" class="roll">${col}</g></svg>`;
-			x += dw;
-			return out;
+	// A counter that ticks through a range's frames. Digits sit in fixed slots of the final string;
+	// leading slots stay blank, and the group slides left so the number always starts at x0.
+	const counter = (r, value, final, x0, baseY, size, fill, weight, suffix = () => '') => {
+		const dw = size * 0.62, cw = size * 0.3, lh = size * 1.3;
+		const chars = [...fmt(final)];
+		const widths = chars.map((c) => (/\d/.test(c) ? dw : cw));
+		const digitsAfter = chars.map((_, i) => chars.slice(i + 1).filter((c) => /\d/.test(c)).length);
+		const place = (n, i) => {
+			const shown = fmt(n).replace(/,/g, '');
+			const pos = shown.length - 1 - digitsAfter[i]; // index into `shown` for this slot
+			return pos >= 0 ? Number(shown[pos]) : 10; // 10 is the blank row
+		};
+		const lead = (n) => {
+			const digits = String(n).length;
+			let w = 0;
+			chars.forEach((c, i) => {
+				// A digit slot is blank past the number's length; a comma is blank with no digit before it.
+				if (/\d/.test(c) ? digitsAfter[i] + 1 > digits : digitsAfter[i] >= digits) w += widths[i];
+			});
+			return w;
+		};
+		let x = 0;
+		const glyphs = chars
+			.map((c, i) => {
+				const xi = x;
+				x += widths[i];
+				if (!/\d/.test(c))
+					return `<text x="${(xi + cw / 2).toFixed(1)}" y="${baseY}" text-anchor="middle">${c}${track(r, 'opacity', 0, (fr) => (lead(value(fr)) <= xi ? 1 : 0))}</text>`;
+				const col = Array.from({ length: 10 }, (_, d) => `<text x="${(dw / 2).toFixed(1)}" y="${(size * 0.95 + d * lh).toFixed(1)}" text-anchor="middle">${d}</text>`).join('');
+				return `<svg x="${xi.toFixed(1)}" y="${(baseY - size * 0.95).toFixed(1)}" width="${dw.toFixed(1)}" height="${lh.toFixed(1)}"><g transform="translate(0 ${(-place(final, i) * lh).toFixed(1)})">${track(r, '', `0 ${(-10 * lh).toFixed(1)}`, (fr) => `0 ${(-place(value(fr), i) * lh).toFixed(1)}`, 'translate')}${col}</g></svg>`;
+			})
+			.join('');
+		return {
+			width: x,
+			body: `<g font-size="${size}" font-weight="${weight}" fill="${fill}" style="font-variant-numeric:tabular-nums"><g transform="translate(${x0} 0)">${track(r, '', `${x0 - x} 0`, (fr) => `${x0 - lead(value(fr))} 0`, 'translate')}${glyphs}${suffix(x)}</g></g>`,
+		};
+	};
+
+	const groups = ranges
+		.map((r) => {
+			const big = counter(r, (fr) => fr.count, r.total, 0, 104, 44, t.ink, 700, (w) => `<text x="${(w + 12).toFixed(1)}" y="104" font-size="15" font-weight="400" fill="${t.muted}" style="font-variant-numeric:normal">contributions</text>`);
+			const up = r.pct === null || r.pct >= 0;
+			const tone = up ? gain : LOSS;
+			const pct = r.pct === null ? null : counter(r, (fr) => Math.abs(fr.pct), Math.abs(r.pct), 11, 138, 15, tone, 600, (w) => `<text x="${(w + 1).toFixed(1)}" y="138">%<tspan fill="${t.muted}" font-weight="400"> ${r.versus}</tspan></text>`);
+			const sub = pct
+				? `<text x="0" y="138" font-size="15" font-weight="600" fill="${tone}">${up ? '+' : '−'}</text>${pct.body}`
+				: `<text x="0" y="138" font-size="15" fill="${t.muted}">Past ${r.days === 365 ? 'year' : `${r.days} days`}</text>`;
+			
+			// The clip widens with x at a constant rate, and the dot rides the path to match it.
+			const keyPoints = r.frames.map((fr) => fr.len.toFixed(4));
+			const motion = [[0, 0], ...(r.t0 > 0 ? [[r.t0 - 0.001, 0]] : []), ...r.frames.map((fr, j) => [r.t0 + fr.f * DRAW, keyPoints[j]]), [T, 1]];
+			return `<g opacity="${r.k === 0 ? 1 : 0}">${showing(r)}
+<defs><clipPath id="c${r.k}"><rect x="-4" y="0" width="${W + 8}" height="${H}">${track(r, 'width', 0, (fr) => (fr.f * W + 4).toFixed(1))}</rect></clipPath></defs>
+<path id="p${r.k}" d="${r.d}" fill="none" stroke="${gain}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" clip-path="url(#c${r.k})"/>
+<circle r="4.5" fill="${gain}" cx="0" cy="0"><animateMotion dur="${T}s" repeatCount="indefinite" calcMode="linear" keyPoints="${motion.map((m) => m[1]).join(';')}" keyTimes="${motion.map((m) => kt(m[0])).join(';')}"><mpath href="#p${r.k}"/></animateMotion></circle>
+${big.body}
+${sub}
+</g>`;
 		})
-		.join('');
-
-	const change = (r) =>
-		`<text x="0" y="138" font-size="15" font-weight="600" fill="${gain}" opacity="${r === first ? 1 : 0}">+${fmt(r.change)}${r.pct === null ? '' : ` (+${r.pct >= 1000 ? fmt(Math.round(r.pct)) : r.pct.toFixed(1)}%)`}<tspan fill="${t.ink}" font-weight="400"> ${r.label}</tspan>${anim('opacity', seq((k) => (ranges[k] === r ? 1 : 0)))}</text>`;
+		.join('\n');
 
 	const tabW = 52, tabY = 362;
-	const tabX = (k) => k * tabW;
+	const ul = [];
+	ranges.forEach((r) => {
+		ul.push([r.t0 + (r.k ? 0.001 : 0), r.k * tabW + 10]);
+		ul.push([r.t0 + DRAW + HOLD + FADE - 0.002, r.k * tabW + 10]);
+	});
+	ul[0][0] = 0;
+	ul.push([T, 10]);
+	const underline = `<rect x="10" y="${tabY + 10}" width="${tabW - 20}" height="2" rx="1" fill="${gain}"><animate attributeName="x" values="${ul.map((u) => u[1]).join(';')}" keyTimes="${ul.map((u) => kt(u[0])).join(';')}" dur="${T}s" repeatCount="indefinite"/></rect>`;
 	const tabs = ranges
-		.map((r, k) => {
-			const cx = tabX(k) + tabW / 2;
-			return `<text x="${cx}" y="${tabY}" text-anchor="middle" fill="${t.ink}">${r.tab}</text><text x="${cx}" y="${tabY}" text-anchor="middle" fill="${gain}" opacity="${r === first ? 1 : 0}">${r.tab}${anim('opacity', seq((j) => (j === k ? 1 : 0)))}</text>`;
-		})
+		.map((r) => `<text x="${r.k * tabW + tabW / 2}" y="${tabY}" text-anchor="middle" fill="${t.ink}">${r.tab}</text><text x="${r.k * tabW + tabW / 2}" y="${tabY}" text-anchor="middle" fill="${gain}" opacity="${r.k === 0 ? 1 : 0}">${r.tab}${showing(r)}</text>`)
 		.join('');
-	const underline = `<rect x="${tabX(ORDER[0]) + 10}" y="${tabY + 10}" width="${tabW - 20}" height="2" rx="1" fill="${gain}">${anim('x', seq((k) => tabX(k) + 10))}</rect>`;
-
-	// Robinhood's dotted reference line, here the price at the open of the range: always the floor.
-	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom}" r="1"/>`).join('');
-
+	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom + 0.5}" r="1"/>`).join('');
 	const statsRow = [
-		['Current streak', `${s.streak} days`],
+		['Contributions', fmt(cal.total)],
 		['Longest streak', `${s.longest} days`],
-		['Best day', `${fmt(s.best.count)}`],
+		['Best day', fmt(s.best.count)],
 		['Days shipped', `${fmt(s.active)} of ${fmt(days.length)}`],
 	]
 		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H - 34}" font-size="13" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H - 10}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
 		.join('');
 
 	const since = new Date(days[0].date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
-	const label = `${profile.fullName}: ${fmt(total)} GitHub contributions since ${since}, +${fmt(ranges[1].change)} in the past month`;
+	const label = `${profile.fullName}: ${fmt(cal.total)} GitHub contributions since ${since}, ${fmt(ranges[0].total)} in the past month`;
 	const body = `
-<style>
-.roll{animation:roll 1.6s cubic-bezier(.15,.85,.25,1) both}
-.line{stroke-dasharray:1;animation:draw 2.2s cubic-bezier(.6,0,.2,1) .15s both}
-.fade{animation:fade .6s ease 2.2s both}
-.ring{transform-box:fill-box;transform-origin:center;animation:ping 1.8s ease-out 2.4s infinite both}
-@keyframes roll{from{transform:translateY(0)}to{transform:translateY(var(--to))}}
-@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
-@keyframes fade{from{opacity:0}to{opacity:1}}
-@keyframes ping{0%{transform:scale(1);opacity:.5}75%,100%{transform:scale(3.4);opacity:0}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}
-</style>
 <text x="0" y="34" font-size="26" font-weight="700" fill="${t.ink}" letter-spacing="-0.4">${esc(profile.fullName)}</text>
-<g font-size="${size}" font-weight="700" fill="${t.ink}" letter-spacing="-1" style="font-variant-numeric:tabular-nums">${odometer}</g>
-<text x="${(x + 12).toFixed(1)}" y="${baseY}" font-size="15" fill="${t.muted}">contributions</text>
-${ranges.map(change).join('')}
-<g fill="${t.rule}" fill-opacity="${t.ruleOp * 2.2}">${dots}</g>
-<path class="line" d="${first.d}" pathLength="1" fill="none" stroke="${gain}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">${anim('d', seq((k) => ranges[k].d))}</path>
-<g class="fade"><circle class="ring" cx="${W - padX}" cy="${top}" r="4.5" fill="${gain}"/><circle cx="${W - padX}" cy="${top}" r="4.5" fill="${gain}"/></g>
+<g fill="${t.rule}" fill-opacity="${(t.ruleOp * 2.2).toFixed(2)}">${dots}</g>
+${groups}
 <g font-size="13" font-weight="700" letter-spacing="0.3">${tabs}</g>
 ${underline}
 <rect x="0" y="${tabY + 26}" width="${W}" height="1" fill="${t.rule}" fill-opacity="${t.ruleOp}"/>
@@ -275,13 +302,6 @@ ${p.intro.map((l) => `<small>${l}</small>`).join('\n\n')}
 
 ${sections}
 
-#### Building with
-
-<small>${p.stack.join(' · ')}</small>
-
-<br>
-
-<p>${p.featured.map((f, i) => `<a href="https://github.com/${f.repo}">${picture(`featured-${i + 1}`, `${f.label}: ${f.desc}`, 'height="32"')}</a>`).join('\n')}</p>
 `;
 }
 
@@ -307,7 +327,6 @@ for (const theme of Object.keys(THEMES)) {
 		...(so.site && { 'social-site': pill(theme, 'site', so.site) }),
 		...(so.email && { 'social-email': pill(theme, 'email', 'Email') }),
 	};
-	profile.featured.forEach((f, i) => (files[`featured-${i + 1}`] = pill(theme, 'repo', f.label, f.desc)));
 	for (const [name, content] of Object.entries(files)) await writeFile(`${OUT}/${name}-${theme}.svg`, content);
 }
 await writeFile('README.md', readme(profile));
