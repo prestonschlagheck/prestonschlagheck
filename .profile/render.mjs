@@ -101,7 +101,7 @@ const RANGES = [
 	{ tab: '6M', days: 182, smooth: 5, versus: 'vs previous 6 months' },
 	{ tab: '3M', days: 91, smooth: 3, versus: 'vs previous 3 months' },
 ];
-const DRAW = 4.2, HOLD = 2.6, FADE = 0.45; // seconds per range
+const DRAW = 5, HOLD = 2.6, FADE = 0.45; // seconds per range
 const FRAMES = 110; // count updates per draw, about 26 a second
 
 function ticker(theme, profile, cal) {
@@ -217,12 +217,24 @@ ${sub}
 	const nonzero = recent.map((d) => d.count).filter(Boolean).sort((a, b) => a - b);
 	const q = (f) => nonzero[Math.floor(f * (nonzero.length - 1))] ?? 1;
 	const level = (n) => (n === 0 ? 0 : n <= q(0.25) ? 1 : n <= q(0.5) ? 2 : n <= q(0.75) ? 3 : 4);
-	const shade = [0.012, 0.026, 0.042, 0.06, 0.085].map((o) => (theme === 'light' ? o * 0.8 : o));
+	const shade = [0.008, 0.018, 0.03, 0.042, 0.06].map((o) => (theme === 'light' ? o * 0.8 : o));
 	const offset = new Date(recent[0].date + 'T00:00:00Z').getUTCDay();
+	// Cells fill in one at a time, top to bottom down each column, then the next column, keeping pace
+	// with the dot: cell i lights when the dot is i/N of the way across. The dot's position is eased
+	// (f = 0.5 - 0.5 cos(pi u)), so this inverts it to find the moment.
+	const cells = recent.length + offset;
+	const at = (n) => Math.acos(1 - 2 * Math.min(1, n / cells)) / Math.PI;
 	const grid = recent
 		.map((d, i) => {
 			const col = Math.floor((i + offset) / 7), row = (i + offset) % 7;
-			return `<rect x="${(col * cw + 1.5).toFixed(1)}" y="${(gy + row * ch + 1.5).toFixed(1)}" width="${(cw - 3.5).toFixed(1)}" height="${(ch - 3.5).toFixed(1)}" rx="3" fill-opacity="${shade[level(d.count)]}"/>`;
+			const o = shade[level(d.count)];
+			const keys = [[0, 0]];
+			ranges.forEach((r) => {
+				const on = r.t0 + at(i + offset + 1) * DRAW, out = r.t0 + DRAW + HOLD;
+				keys.push([Math.max(on - 0.001, keys.at(-1)[0] + 0.001), 0], [on + 0.25, o], [out, o], [out + FADE, 0]);
+			});
+			keys.push([T, 0]);
+			return `<rect x="${(col * cw + 1.5).toFixed(1)}" y="${(gy + row * ch + 1.5).toFixed(1)}" width="${(cw - 3.5).toFixed(1)}" height="${(ch - 3.5).toFixed(1)}" rx="3" fill-opacity="${o}"><animate attributeName="fill-opacity" values="${keys.map((k) => k[1]).join(';')}" keyTimes="${keys.map((k) => kt(k[0])).join(';')}" dur="${T}s" repeatCount="indefinite"/></rect>`;
 		})
 		.join('');
 	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom + 0.5}" r="1"/>`).join('');
