@@ -7,23 +7,33 @@
 
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/prestonschlagheck/prestonschlagheck/output/ticker-dark.svg"><img alt="$PRES contribution chart" src="https://raw.githubusercontent.com/prestonschlagheck/prestonschlagheck/output/ticker-light.svg" width="100%"></picture></p>
 
-## Hey, I'm Preston 👋
+I build AI products from first prototype to launch. Right now I'm Head of Product at [Mano Wellness](https://manowellness.app).
 
-<small>I'm Head of Product at [Mano Wellness](https://manowellness.app). We built Manny, an AI health coach on [iPhone](https://apps.apple.com/us/app/manny-your-personal-trainer/id6783495822) and the [web](https://manowellness.app) that reads your wearables, sleep and nutrition. It's live with 4+ corporate clients.</small>
+#### Work
 
-<small>I'm also a full-time finance student at South Carolina, so most of this gets built at night. The chart counts private repos too.</small>
+- Head of Product, [Mano Wellness](https://manowellness.app)
+  - Launched Manny, a private AI health coach on [iPhone](https://apps.apple.com/us/app/manny-your-personal-trainer/id6783495822) and the [web](https://manowellness.app) that reads wearables, sleep and nutrition
+  - Serving hundreds of users and 4+ corporate clients with no paid marketing
+- AI Strategy & Automations, [Direct Journeyline Holdings](https://www.directjh.com)
+  - Automated month-end reconciliation, reporting and forecasting across a multi-company truck parking and logistics portfolio
+  - Saves the team 10+ hours a week
+- Co-founder & Lead Engineer, [Diffuse](https://www.diffuse.press)
+  - Built an AI newsroom that let one person run a county's local news
+  - 26,000+ monthly pageviews across 3 sites, profitable in 4 months
+- Co-founder, [CogNodes](https://cognodes.com)
+  - AI strategy and production builds for 8 paying clients, including Mano and Lookr
+- Generative & Agentic AI Intern, [US HealthConnect](https://www.ushealthconnect.com)
+  - Built 6 automation workflows and 2 AI agents for finance, compliance and operations
+  - Cut turnaround time 35%
 
-#### Experience
+#### Education & leadership
 
-- <small>Head of Product @ [Mano Wellness](https://manowellness.app) (AI health coach on iOS and web, 4+ corporate clients)</small>
-- <small>Co-founder & Lead Engineer @ [Diffuse](https://www.diffuse.press) (AI newsroom, 26k+ monthly pageviews, profitable in 4 months)</small>
-- <small>Co-founder @ [CogNodes](https://cognodes.com) (AI agents and production builds for 8 paying clients)</small>
-- <small>AI Strategy & Automations @ [Direct Journeyline Holdings](https://www.directjh.com) (10+ hours a week saved on month-end)</small>
-- <small>Agentic AI Intern @ [US HealthConnect](https://www.ushealthconnect.com) (2 AI agents, 6 workflows, 35% faster turnaround)</small>
-
-#### Accomplishments
-
-- <small>CTO @ [Garnet Fund](https://www.garnetfund.org) (built the risk platform for USC's first student-run fund)</small>
-- <small>President @ Sigma Phi Epsilon, SC Alpha (230+ members)</small>
-- <small>Finance + Business Analytics @ University of South Carolina '28</small>
+- University of South Carolina, B.S. Business Administration (2028)
+  - Finance & Business Analytics, 3.72 GPA
+- CTO, [Garnet Fund](https://www.garnetfund.org)
+  - Built the risk platform for USC's first student-run fund, a $100K+ long/short portfolio with 35+ members
+- President, Sigma Phi Epsilon (SC Alpha)
+  - Budget, recruitment and compliance for 230+ members, leading the campus in GPA and size
+- Alpha Fund Manager, Alpha Kappa Psi
+  - Ran a $23,000 portfolio with 12 analysts, up 12% over six months
 

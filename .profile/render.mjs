@@ -93,27 +93,30 @@ function stats(days) {
 // Robinhood's stock page, played as a loop. For each range a dot draws the line left to right while
 // the count and the change against the period before tick up with it, then the next range starts.
 // Everything is SMIL on one shared clock, so it runs inside GitHub's <img> with no script.
+// Longest first, so the first thing a visitor sees is the biggest number. 1Y only appears once
+// there is more than a year of history to compare it against.
 const RANGES = [
-	{ tab: '1M', days: 30, smooth: 1, versus: 'vs previous month' },
-	{ tab: '3M', days: 91, smooth: 3, versus: 'vs previous 3 months' },
-	{ tab: '6M', days: 182, smooth: 5, versus: 'vs previous 6 months' },
 	{ tab: '1Y', days: 365, smooth: 7, versus: 'vs previous year' },
+	{ tab: '9M', days: 273, smooth: 6, versus: 'vs previous 9 months' },
+	{ tab: '6M', days: 182, smooth: 5, versus: 'vs previous 6 months' },
+	{ tab: '3M', days: 91, smooth: 3, versus: 'vs previous 3 months' },
 ];
-const DRAW = 3.4, HOLD = 2.2, FADE = 0.45; // seconds per range
-const FRAMES = 60; // count updates per draw
+const DRAW = 4.2, HOLD = 2.6, FADE = 0.45; // seconds per range
+const FRAMES = 110; // count updates per draw, about 26 a second
 
 function ticker(theme, profile, cal) {
 	const t = THEMES[theme];
 	const gain = GAIN[theme];
-	const W = 880, H = 430, top = 156, bottom = 318;
+	const W = 880, H = 448, top = 184, bottom = 326;
 	const { days } = cal;
 	const s = stats(days);
 	const slot = DRAW + HOLD + FADE;
-	const T = slot * RANGES.length;
-	const kt = (sec) => Math.min(1, Math.max(0, sec / T)).toFixed(5);
+	const active = RANGES.filter((r) => r.days < 365 || days.length > 365);
+	const T = slot * active.length;
+	const kt = (sec) => +Math.min(1, Math.max(0, sec / T)).toFixed(5);
 	const sum = (a, b) => days.slice(Math.max(0, a), Math.max(0, b)).reduce((n, d) => n + d.count, 0);
 
-	const ranges = RANGES.map((r, k) => {
+	const ranges = active.map((r, k) => {
 		const span = Math.min(r.days, days.length);
 		const start = days.length - span;
 		const total = sum(start, days.length);
@@ -134,9 +137,11 @@ function ticker(theme, profile, cal) {
 			return arr[i] + (arr[j] - arr[i]) * (x - i);
 		};
 		const frames = Array.from({ length: FRAMES + 1 }, (_, j) => {
-			const f = j / FRAMES;
+			// u is time through the draw, f is how far along the line the dot is: eased in and out.
+			const u = j / FRAMES;
+			const f = 0.5 - 0.5 * Math.cos(Math.PI * u);
 			const count = j === FRAMES ? total : Math.round(at(f, cum));
-			return { f, count, pct: pct === null ? null : Math.round((pct * count) / Math.max(1, total)), len: at(f, len) / L };
+			return { u, f, count, pct: pct === null ? null : Math.round((pct * count) / Math.max(1, total)), len: at(f, len) / L };
 		});
 		const d = 'M' + pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L');
 		return { ...r, k, t0: k * slot, total, pct, d, frames, end: pts.at(-1) };
@@ -148,70 +153,43 @@ function ticker(theme, profile, cal) {
 		const keys = r.k === 0 ? [[0, 1], [b, 1], [c, 0], [T, 0]] : [[0, 0], [a - 0.001, 0], [a, 1], [b, 1], [c, 0], [T, 0]];
 		return `<animate attributeName="opacity" values="${keys.map((x) => x[1]).join(';')}" keyTimes="${keys.map((x) => kt(x[0])).join(';')}" dur="${T}s" repeatCount="indefinite"/>`;
 	};
-	// A discrete track: value v0 before the draw, then one value per frame across the draw.
-	const track = (r, attr, v0, at, type) => {
-		const keys = [[0, v0], ...(r.t0 > 0 ? [[r.t0 - 0.001, v0]] : []), ...r.frames.map((fr) => [r.t0 + fr.f * DRAW, at(fr)])];
-		keys.push([T, keys.at(-1)[1]]);
-		const tag = type ? `animateTransform attributeName="transform" type="${type}"` : `animate attributeName="${attr}"`;
-		return `<${tag} values="${keys.map((x) => x[1]).join(';')}" keyTimes="${keys.map((x) => kt(x[0])).join(';')}" calcMode="discrete" dur="${T}s" repeatCount="indefinite"/>`;
-	};
-
-	// A counter that ticks through a range's frames. Digits sit in fixed slots of the final string;
-	// leading slots stay blank, and the group slides left so the number always starts at x0.
-	const counter = (r, value, final, x0, baseY, size, fill, weight, suffix = () => '') => {
-		const dw = size * 0.62, cw = size * 0.3, lh = size * 1.3;
-		const chars = [...fmt(final)];
-		const widths = chars.map((c) => (/\d/.test(c) ? dw : cw));
-		const digitsAfter = chars.map((_, i) => chars.slice(i + 1).filter((c) => /\d/.test(c)).length);
-		const place = (n, i) => {
-			const shown = fmt(n).replace(/,/g, '');
-			const pos = shown.length - 1 - digitsAfter[i]; // index into `shown` for this slot
-			return pos >= 0 ? Number(shown[pos]) : 10; // 10 is the blank row
-		};
-		const lead = (n) => {
-			const digits = String(n).length;
-			let w = 0;
-			chars.forEach((c, i) => {
-				// A digit slot is blank past the number's length; a comma is blank with no digit before it.
-				if (/\d/.test(c) ? digitsAfter[i] + 1 > digits : digitsAfter[i] >= digits) w += widths[i];
-			});
-			return w;
-		};
-		let x = 0;
-		const glyphs = chars
-			.map((c, i) => {
-				const xi = x;
-				x += widths[i];
-				if (!/\d/.test(c))
-					return `<text x="${(xi + cw / 2).toFixed(1)}" y="${baseY}" text-anchor="middle">${c}${track(r, 'opacity', 0, (fr) => (lead(value(fr)) <= xi ? 1 : 0))}</text>`;
-				const col = Array.from({ length: 10 }, (_, d) => `<text x="${(dw / 2).toFixed(1)}" y="${(size * 0.95 + d * lh).toFixed(1)}" text-anchor="middle">${d}</text>`).join('');
-				return `<svg x="${xi.toFixed(1)}" y="${(baseY - size * 0.95).toFixed(1)}" width="${dw.toFixed(1)}" height="${lh.toFixed(1)}"><g transform="translate(0 ${(-place(final, i) * lh).toFixed(1)})">${track(r, '', `0 ${(-10 * lh).toFixed(1)}`, (fr) => `0 ${(-place(value(fr), i) * lh).toFixed(1)}`, 'translate')}${col}</g></svg>`;
+	// The count and the change, re-set as plain text for each frame of the draw. Each frame's text is
+	// shown only until the next one, which renders the same in every browser and keeps the number
+	// left aligned with its label riding along after it.
+	const ticking = (r, text) => {
+		const shown = [];
+		r.frames.forEach((fr) => {
+			const s = text(fr);
+			if (shown.at(-1)?.s !== s) shown.push({ s, at: r.t0 + fr.u * DRAW });
+		});
+		return shown
+			.map(({ s, at }, j) => {
+				const next = shown[j + 1]?.at;
+				const keys = j === 0 ? [[0, 1]] : [[0, 0], [at, 1]];
+				if (next !== undefined) keys.push([next, 0]);
+				const last = j === shown.length - 1;
+				return `<g opacity="${last ? 1 : 0}"><animate attributeName="opacity" values="${keys.map((x) => x[1]).join(';')}" keyTimes="${keys.map((x) => kt(x[0])).join(';')}" calcMode="discrete" dur="${T}s" repeatCount="indefinite"/>${s}</g>`;
 			})
 			.join('');
-		return {
-			width: x,
-			body: `<g font-size="${size}" font-weight="${weight}" fill="${fill}" style="font-variant-numeric:tabular-nums"><g transform="translate(${x0} 0)">${track(r, '', `${x0 - x} 0`, (fr) => `${x0 - lead(value(fr))} 0`, 'translate')}${glyphs}${suffix(x)}</g></g>`,
-		};
 	};
 
 	const groups = ranges
 		.map((r) => {
-			const big = counter(r, (fr) => fr.count, r.total, 0, 104, 44, t.ink, 700, (w) => `<text x="${(w + 12).toFixed(1)}" y="104" font-size="15" font-weight="400" fill="${t.muted}" style="font-variant-numeric:normal">contributions</text>`);
 			const up = r.pct === null || r.pct >= 0;
 			const tone = up ? gain : LOSS;
-			const pct = r.pct === null ? null : counter(r, (fr) => Math.abs(fr.pct), Math.abs(r.pct), 11, 138, 15, tone, 600, (w) => `<text x="${(w + 1).toFixed(1)}" y="138">%<tspan fill="${t.muted}" font-weight="400"> ${r.versus}</tspan></text>`);
-			const sub = pct
-				? `<text x="0" y="138" font-size="15" font-weight="600" fill="${tone}">${up ? '+' : '−'}</text>${pct.body}`
-				: `<text x="0" y="138" font-size="15" fill="${t.muted}">Past ${r.days === 365 ? 'year' : `${r.days} days`}</text>`;
-			
+			const big = `<g class="big">${ticking(r, (fr) => `<text y="104">${fmt(fr.count)}<tspan dx="12" class="lbl">contributions</tspan></text>`)}</g>`;
+			const sub =
+				r.pct === null
+					? `<text x="0" y="138" font-size="15" fill="${t.muted}">Past ${r.days === 365 ? 'year' : `${r.days} days`}</text>`
+					: `<g class="sub" fill="${tone}">${ticking(r, (fr) => `<text y="138">${up ? '+' : '−'}${fmt(Math.abs(fr.pct))}%<tspan class="vs"> ${r.versus}</tspan></text>`)}</g>`;
 			// The clip widens with x at a constant rate, and the dot rides the path to match it.
 			const keyPoints = r.frames.map((fr) => fr.len.toFixed(4));
-			const motion = [[0, 0], ...(r.t0 > 0 ? [[r.t0 - 0.001, 0]] : []), ...r.frames.map((fr, j) => [r.t0 + fr.f * DRAW, keyPoints[j]]), [T, 1]];
+			const motion = [[0, 0], ...(r.t0 > 0 ? [[r.t0 - 0.001, 0]] : []), ...r.frames.map((fr, j) => [r.t0 + fr.u * DRAW, keyPoints[j]]), [T, 1]];
 			return `<g opacity="${r.k === 0 ? 1 : 0}">${showing(r)}
-<defs><clipPath id="c${r.k}"><rect x="-4" y="0" width="${W + 8}" height="${H}">${track(r, 'width', 0, (fr) => (fr.f * W + 4).toFixed(1))}</rect></clipPath></defs>
+<defs><clipPath id="c${r.k}"><rect x="-4" y="0" width="${W + 8}" height="${H}"><animate attributeName="width" values="${r.t0 > 0 ? '0;' : ''}${r.frames.map((fr) => (fr.f * W + 4).toFixed(1)).join(';')};${W + 8}" keyTimes="${r.t0 > 0 ? '0;' : ''}${r.frames.map((fr) => kt(r.t0 + fr.u * DRAW)).join(';')};1" dur="${T}s" repeatCount="indefinite"/></rect></clipPath></defs>
 <path id="p${r.k}" d="${r.d}" fill="none" stroke="${gain}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" clip-path="url(#c${r.k})"/>
 <circle r="4.5" fill="${gain}" cx="0" cy="0"><animateMotion dur="${T}s" repeatCount="indefinite" calcMode="linear" keyPoints="${motion.map((m) => m[1]).join(';')}" keyTimes="${motion.map((m) => kt(m[0])).join(';')}"><mpath href="#p${r.k}"/></animateMotion></circle>
-${big.body}
+${big}
 ${sub}
 </g>`;
 		})
@@ -236,18 +214,19 @@ ${sub}
 		['Best day', fmt(s.best.count)],
 		['Days shipped', `${fmt(s.active)} of ${fmt(days.length)}`],
 	]
-		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H - 34}" font-size="13" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H - 10}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
+		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H - 30}" font-size="13" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H - 7}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
 		.join('');
 
 	const since = new Date(days[0].date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 	const label = `${profile.fullName}: ${fmt(cal.total)} GitHub contributions since ${since}, ${fmt(ranges[0].total)} in the past month`;
 	const body = `
+<style>.big{font-size:44px;font-weight:700;letter-spacing:-1px;fill:${t.ink}}.lbl{font-size:15px;font-weight:400;letter-spacing:0;fill:${t.muted}}.sub{font-size:15px;font-weight:600}.vs{font-weight:400;fill:${t.muted}}</style>
 <text x="0" y="34" font-size="26" font-weight="700" fill="${t.ink}" letter-spacing="-0.4">${esc(profile.fullName)}</text>
 <g fill="${t.rule}" fill-opacity="${(t.ruleOp * 2.2).toFixed(2)}">${dots}</g>
 ${groups}
 <g font-size="13" font-weight="700" letter-spacing="0.3">${tabs}</g>
 ${underline}
-<rect x="0" y="${tabY + 26}" width="${W}" height="1" fill="${t.rule}" fill-opacity="${t.ruleOp}"/>
+<rect x="0" y="${tabY + 24}" width="${W}" height="1" fill="${t.rule}" fill-opacity="${t.ruleOp}"/>
 ${statsRow}`;
 	return svg(W, H, label, body);
 }
@@ -288,7 +267,7 @@ function readme(p) {
 		so.email && ['social-email', `mailto:${so.email}`, so.email],
 	].filter(Boolean);
 	const sections = Object.entries(p.sections)
-		.map(([title, items]) => `#### ${title}\n\n${items.map((i) => `- <small>${i}</small>`).join('\n')}`)
+		.map(([title, items]) => `#### ${title}\n\n${items.map((i) => `- ${i.head}\n${i.points.map((pt) => `  - ${pt}`).join('\n')}`).join('\n')}`)
 		.join('\n\n');
 	return `<!-- Generated by .profile/render.mjs from profile.json. Edit profile.json, not this file. -->
 
@@ -296,9 +275,7 @@ function readme(p) {
 
 <p>${picture('ticker', `$${p.ticker} contribution chart`, 'width="100%"')}</p>
 
-## Hey, I'm ${p.name} 👋
-
-${p.intro.map((l) => `<small>${l}</small>`).join('\n\n')}
+${p.intro.join('\n\n')}
 
 ${sections}
 
