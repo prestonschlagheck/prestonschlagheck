@@ -210,10 +210,10 @@ ${sub}
 		.join('');
 	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom + 0.5}" r="1"/>`).join('');
 	const statsRow = [
-		['Contributions', fmt(cal.total)],
-		['Longest streak', `${s.longest} days`],
+		['All time', fmt(cal.total)],
+		['Last 90 days', fmt(days.slice(-90).reduce((n, d) => n + d.count, 0))],
+		['Daily average, 90 days', fmt(Math.round(days.slice(-90).reduce((n, d) => n + d.count, 0) / 90))],
 		['Best day', fmt(s.best.count)],
-		['Days shipped', `${fmt(s.active)} of ${fmt(days.length)}`],
 	]
 		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H - 30}" font-size="13" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H - 7}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
 		.join('');
@@ -303,7 +303,7 @@ for (const theme of Object.keys(THEMES)) {
 		...(so.x && { 'social-x': pill(theme, 'x', `@${so.x}`) }),
 		...(so.linkedin && { 'social-linkedin': pill(theme, 'linkedin', so.linkedin) }),
 		...(so.site && { 'social-site': pill(theme, 'site', so.site) }),
-		...(so.email && { 'social-email': pill(theme, 'email', 'Email') }),
+		...(so.email && { 'social-email': pill(theme, 'email', so.email) }),
 	};
 	for (const [name, content] of Object.entries(files)) await writeFile(`${OUT}/${name}-${theme}.svg`, content);
 }

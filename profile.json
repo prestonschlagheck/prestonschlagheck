@@ -3,7 +3,7 @@
   "fullName": "Preston Schlagheck",
   "ticker": "PRES",
   "intro": [
-    "I ship AI products end to end, from the data model to the app in your hand. Head of Product at [Mano Wellness](https://manowellness.app)."
+    "Shipping apps and AI products end to end. Currently Head of Product at [Mano Wellness](https://manowellness.app)."
   ],
   "socials": {
     "x": "prestonschlag",
@@ -16,31 +16,31 @@
       {
         "head": "Head of Product, [Mano Wellness](https://manowellness.app)",
         "points": [
-          "Built Manny, an AI health coach in Swift and React on Supabase that reads wearables, sleep and nutrition. Hundreds of users and 4+ corporate clients since launch."
+          "AI health coach on iOS and web. Hundreds of users, 4+ corporate clients."
         ]
       },
       {
         "head": "AI Strategy & Automations, [Direct Journeyline Holdings](https://www.directjh.com)",
         "points": [
-          "Automated month-end reconciliation, reporting and forecasting across a multi-company portfolio. Saves the team 10+ hours a week."
+          "Automated month-end close and forecasting. 10+ hours saved a week."
         ]
       },
       {
         "head": "Co-founder & Lead Engineer, [Diffuse](https://www.diffuse.press)",
         "points": [
-          "Built an AI newsroom on Next.js and Supabase that turns recordings and documents into articles. 26,000+ monthly pageviews across 3 sites, profitable in 4 months."
+          "AI newsroom on Next.js and Supabase. 26K monthly pageviews, profitable in 4 months."
         ]
       },
       {
         "head": "Co-founder, [CogNodes](https://cognodes.com)",
         "points": [
-          "Shipped AI products for 8 paying clients, from RAG assistants to mobile apps."
+          "AI products for 8 paying clients."
         ]
       },
       {
         "head": "Agentic AI Intern, [US HealthConnect](https://www.ushealthconnect.com)",
         "points": [
-          "Built 2 AI agents and 6 automation workflows for finance and compliance teams, cutting turnaround time 35%."
+          "2 AI agents and 6 workflows. Turnaround down 35%."
         ]
       }
     ],
@@ -48,13 +48,13 @@
       {
         "head": "CTO, [Garnet Fund](https://www.garnetfund.org)",
         "points": [
-          "Built the risk platform for USC's first student-run fund, a $100K+ long/short book with 35+ members."
+          "Built the risk platform for a $100K+ student-run fund."
         ]
       },
       {
-        "head": "Finance & Business Analytics, University of South Carolina",
+        "head": "University of South Carolina",
         "points": [
-          "Class of 2028, 3.72 GPA."
+          "Finance & Business Analytics, class of 2028. 3.72 GPA."
         ]
       },
       {
