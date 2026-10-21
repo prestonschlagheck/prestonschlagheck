@@ -98,22 +98,19 @@ function stats(days) {
 // Everything is SMIL on one shared clock, so it runs inside GitHub's <img> with no script.
 // Longest first, so the first thing a visitor sees is the biggest number. 1Y only appears once
 // there is more than a year of history to compare it against.
-const RANGES = [
-	{ tab: '1Y', days: 365, smooth: 7, versus: 'vs previous year' },
-	{ tab: '9M', days: 273, smooth: 6, versus: 'vs previous 9 months' },
-	{ tab: '6M', days: 182, smooth: 5, versus: 'vs previous 6 months' },
-	{ tab: '3M', days: 91, smooth: 3, versus: 'vs previous 3 months' },
-];
-const DRAW = 5, HOLD = 2.6, FADE = 0.45; // seconds per range
+// GitHub shows README images as plain pictures, so nothing in them can be clicked. One range,
+// drawn once on load, then it holds.
+const RANGES = [{ tab: '1Y', days: 365, smooth: 7, versus: 'vs previous year' }];
+const DRAW = 5, HOLD = 0.6; // seconds: the draw, then a beat before everything freezes
 const FRAMES = 110; // count updates per draw, about 26 a second
 
 function ticker(theme, profile, cal) {
 	const t = THEMES[theme];
 	const gain = GAIN[theme];
-	const W = 880, H = 344, top = 164, bottom = 290, LIFT = 62; // LIFT: header space freed by dropping the name
+	const W = 880, H = 308, top = 164, bottom = 290, LIFT = 62; // LIFT: header space freed by dropping the name
 	const { days } = cal;
 	const s = stats(days);
-	const slot = DRAW + HOLD + FADE;
+	const slot = DRAW + HOLD;
 	const active = RANGES.filter((r) => r.days < 365 || days.length > 365);
 	const T = slot * active.length;
 	const kt = (sec) => +Math.min(1, Math.max(0, sec / T)).toFixed(5);
@@ -152,11 +149,8 @@ function ticker(theme, profile, cal) {
 	});
 
 	// Visible for its own slot only. Keyframes are nudged apart so no two land on the same time.
-	const showing = (r) => {
-		const a = r.t0, b = r.t0 + DRAW + HOLD, c = b + FADE;
-		const keys = r.k === 0 ? [[0, 1], [b, 1], [c, 0], [T, 0]] : [[0, 0], [a - 0.001, 0], [a, 1], [b, 1], [c, 0], [T, 0]];
-		return `<animate attributeName="opacity" values="${keys.map((x) => x[1]).join(';')}" keyTimes="${keys.map((x) => kt(x[0])).join(';')}" dur="${T}s" repeatCount="indefinite"/>`;
-	};
+	const showing = () => '';
+
 	// The count and the change, re-set as plain text for each frame of the draw. Each frame's text is
 	// shown only until the next one, which renders the same in every browser and keeps the number
 	// left aligned with its label riding along after it.
@@ -221,20 +215,6 @@ ${sub}
 		})
 		.join('\n');
 
-	const tabW = 52, tabY = bottom + 36;
-	// Tabs read short to long, left to right, while the loop plays them long to short.
-	const tabX = (r) => (ranges.length - 1 - r.k) * tabW;
-	const ul = [];
-	ranges.forEach((r) => {
-		ul.push([r.t0 + (r.k ? 0.001 : 0), tabX(r) + 10]);
-		ul.push([r.t0 + DRAW + HOLD + FADE - 0.002, tabX(r) + 10]);
-	});
-	ul[0][0] = 0;
-	ul.push([T, tabX(ranges[0]) + 10]);
-	const underline = `<rect x="${tabX(ranges[0]) + 10}" y="${tabY + 10}" width="${tabW - 20}" height="2" rx="1" fill="${gain}"><animate attributeName="x" values="${ul.map((u) => u[1]).join(';')}" keyTimes="${ul.map((u) => kt(u[0])).join(';')}" dur="${T}s" repeatCount="indefinite"/></rect>`;
-	const tabs = ranges
-		.map((r) => `<text x="${tabX(r) + tabW / 2}" y="${tabY}" text-anchor="middle" fill="${t.ink}">${r.tab}</text><text x="${tabX(r) + tabW / 2}" y="${tabY}" text-anchor="middle" fill="${gain}" opacity="${r.k === 0 ? 1 : 0}">${r.tab}${showing(r)}</text>`)
-		.join('');
 	// The last year's contribution calendar, tone on tone behind the line: one cell per day, a
 	// column per week, filled by quartile like GitHub's own graph but barely there.
 	const weeks = 53, cw = W / weeks, ch = cw, gy = bottom - 12 - 7 * ch;
@@ -257,10 +237,10 @@ ${sub}
 			// instead of cells popping on one by one. Fades out on an ease-in.
 			const keys = [[0, 0, '0 0 1 1']];
 			ranges.forEach((r) => {
-				const on = r.t0 + at(col * 7 + (6 - row) + 1) * DRAW - 0.35, out = r.t0 + DRAW + HOLD;
-				keys.push([Math.max(on, keys.at(-1)[0] + 0.001), 0, '.25 .1 .25 1'], [Math.min(on + 0.9, out - 0.001), o, '0 0 1 1'], [out, o, '.4 0 1 1'], [out + FADE, 0, '0 0 1 1']);
+				const on = r.t0 + at(col * 7 + (6 - row) + 1) * DRAW - 0.35;
+				keys.push([Math.max(on, keys.at(-1)[0] + 0.001), 0, '.25 .1 .25 1'], [Math.min(on + 0.9, T - 0.001), o, '0 0 1 1']);
 			});
-			keys.push([T, 0]);
+			keys.push([T, o]);
 			const splines = keys.slice(0, -1).map((k) => k[2]).join(';');
 			return `<rect x="${(col * cw + 1.5).toFixed(1)}" y="${(gy + row * ch + 1.5).toFixed(1)}" width="${(cw - 3.5).toFixed(1)}" height="${(ch - 3.5).toFixed(1)}" rx="3" fill-opacity="${o}"><animate attributeName="fill-opacity" values="${keys.map((k) => k[1]).join(';')}" keyTimes="${keys.map((k) => kt(k[0])).join(';')}" calcMode="spline" keySplines="${splines}" dur="${T}s" repeatCount="indefinite"/></rect>`;
 		})
@@ -283,12 +263,11 @@ ${sub}
 <g fill="${t.rule}">${grid}</g>
 <g fill="${t.rule}" fill-opacity="${(t.ruleOp * 2.2).toFixed(2)}">${dots}</g>
 ${groups}
-<g font-size="12" font-weight="700" letter-spacing="0.4">${tabs}</g>
-${underline}
-<rect x="0" y="${tabY + 24}" width="${W}" height="1" fill="${t.rule}" fill-opacity="${t.ruleOp}"/>
+<rect x="0" y="${bottom + 24}" width="${W}" height="1" fill="${t.rule}" fill-opacity="${t.ruleOp}"/>
 ${statsRow}
 </g>`;
-	return svg(W, H, label, body);
+	// Play once and hold the last frame.
+	return svg(W, H, label, body.replaceAll('repeatCount="indefinite"', 'fill="freeze"'));
 }
 
 // ---- Pills ------------------------------------------------------------------------------------
