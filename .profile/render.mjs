@@ -233,12 +233,12 @@ ${sub}
 		.map((d, i) => {
 			const col = Math.floor((i + offset) / 7), row = (i + offset) % 7;
 			const o = shade[level(d.count)];
-			// Each cell eases in over most of a second, so a soft band of half-lit cells trails the dot
-			// instead of cells popping on one by one. Fades out on an ease-in.
+			// Each cell lights on its own, a tenth of a second after the dot reaches its spot, with a
+			// quick ease so the fill reads one box at a time right behind the dot.
 			const keys = [[0, 0, '0 0 1 1']];
 			ranges.forEach((r) => {
-				const on = r.t0 + at(col * 7 + (6 - row) + 1) * DRAW - 0.35;
-				keys.push([Math.max(on, keys.at(-1)[0] + 0.001), 0, '.25 .1 .25 1'], [Math.min(on + 0.9, T - 0.001), o, '0 0 1 1']);
+				const on = r.t0 + at(col * 7 + (6 - row) + 1) * DRAW + 0.1;
+				keys.push([Math.max(on, keys.at(-1)[0] + 0.001), 0, '.2 .6 .3 1'], [Math.min(on + 0.14, T - 0.001), o, '0 0 1 1']);
 			});
 			keys.push([T, o]);
 			const splines = keys.slice(0, -1).map((k) => k[2]).join(';');
