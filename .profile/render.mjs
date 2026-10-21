@@ -107,7 +107,7 @@ const FRAMES = 110; // count updates per draw, about 26 a second
 function ticker(theme, profile, cal) {
 	const t = THEMES[theme];
 	const gain = GAIN[theme];
-	const W = 880, H = 448, top = 184, bottom = 326;
+	const W = 880, H = 406, top = 164, bottom = 290;
 	const { days } = cal;
 	const s = stats(days);
 	const slot = DRAW + HOLD + FADE;
@@ -196,7 +196,7 @@ ${sub}
 		})
 		.join('\n');
 
-	const tabW = 52, tabY = 362;
+	const tabW = 52, tabY = bottom + 36;
 	// Tabs read short to long, left to right, while the loop plays them long to short.
 	const tabX = (r) => (ranges.length - 1 - r.k) * tabW;
 	const ul = [];
