@@ -107,7 +107,7 @@ const FRAMES = 110; // count updates per draw, about 26 a second
 function ticker(theme, profile, cal) {
 	const t = THEMES[theme];
 	const gain = GAIN[theme];
-	const W = 880, H = 406, top = 164, bottom = 290;
+	const W = 880, H = 344, top = 164, bottom = 290, LIFT = 62; // LIFT: header space freed by dropping the name
 	const { days } = cal;
 	const s = stats(days);
 	const slot = DRAW + HOLD + FADE;
@@ -228,6 +228,21 @@ ${sub}
 	const tabs = ranges
 		.map((r) => `<text x="${tabX(r) + tabW / 2}" y="${tabY}" text-anchor="middle" fill="${t.ink}">${r.tab}</text><text x="${tabX(r) + tabW / 2}" y="${tabY}" text-anchor="middle" fill="${gain}" opacity="${r.k === 0 ? 1 : 0}">${r.tab}${showing(r)}</text>`)
 		.join('');
+	// The last year's contribution calendar, tone on tone behind the line: one cell per day, a
+	// column per week, filled by quartile like GitHub's own graph but barely there.
+	const weeks = 53, gy = top - 14, cw = W / weeks, ch = (bottom - gy) / 7;
+	const recent = days.slice(-(weeks * 7 - (6 - new Date(days.at(-1).date + 'T00:00:00Z').getUTCDay())));
+	const nonzero = recent.map((d) => d.count).filter(Boolean).sort((a, b) => a - b);
+	const q = (f) => nonzero[Math.floor(f * (nonzero.length - 1))] ?? 1;
+	const level = (n) => (n === 0 ? 0 : n <= q(0.25) ? 1 : n <= q(0.5) ? 2 : n <= q(0.75) ? 3 : 4);
+	const shade = [0.012, 0.026, 0.042, 0.06, 0.085].map((o) => (theme === 'light' ? o * 0.8 : o));
+	const offset = new Date(recent[0].date + 'T00:00:00Z').getUTCDay();
+	const grid = recent
+		.map((d, i) => {
+			const col = Math.floor((i + offset) / 7), row = (i + offset) % 7;
+			return `<rect x="${(col * cw + 1.5).toFixed(1)}" y="${(gy + row * ch + 1.5).toFixed(1)}" width="${(cw - 3).toFixed(1)}" height="${(ch - 3).toFixed(1)}" rx="2.5" fill-opacity="${shade[level(d.count)]}"/>`;
+		})
+		.join('');
 	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom + 0.5}" r="1"/>`).join('');
 	const statsRow = [
 		['All time', fmt(cal.total)],
@@ -235,20 +250,22 @@ ${sub}
 		['Daily average, 90 days', fmt(Math.round(days.slice(-90).reduce((n, d) => n + d.count, 0) / 90))],
 		['Best day', fmt(s.best.count)],
 	]
-		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H - 30}" font-size="13" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H - 7}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
+		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H + LIFT - 30}" font-size="13" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H + LIFT - 7}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
 		.join('');
 
 	const since = new Date(days[0].date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
-	const label = `${profile.fullName}: ${fmt(cal.total)} GitHub contributions since ${since}, ${fmt(ranges[0].total)} in the past month`;
+	const label = `${profile.fullName}: ${fmt(cal.total)} GitHub contributions since ${since}, ${fmt(ranges[0].total)} in the past ${ranges[0].tab === '1Y' ? 'year' : `${ranges[0].days} days`}`;
 	const body = `
 <style>.big{font-size:44px;font-weight:700;letter-spacing:-1px;fill:${t.ink}}.lbl{font-size:15px;font-weight:400;letter-spacing:0;fill:${t.muted}}.sub{font-size:15px;font-weight:600}.vs{font-weight:400;fill:${t.muted}}</style>
-<text x="0" y="34" font-size="26" font-weight="700" fill="${t.ink}" letter-spacing="-0.4">${esc(profile.fullName)}</text>
+<g transform="translate(0 -${LIFT})">
+<g fill="${t.rule}">${grid}</g>
 <g fill="${t.rule}" fill-opacity="${(t.ruleOp * 2.2).toFixed(2)}">${dots}</g>
 ${groups}
 <g font-size="13" font-weight="700" letter-spacing="0.3">${tabs}</g>
 ${underline}
 <rect x="0" y="${tabY + 24}" width="${W}" height="1" fill="${t.rule}" fill-opacity="${t.ruleOp}"/>
-${statsRow}`;
+${statsRow}
+</g>`;
 	return svg(W, H, label, body);
 }
 
