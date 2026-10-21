@@ -7,27 +7,27 @@
 
 <p><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/prestonschlagheck/prestonschlagheck/output/ticker-dark.svg"><img alt="$PRES contribution chart" src="https://raw.githubusercontent.com/prestonschlagheck/prestonschlagheck/output/ticker-light.svg" width="100%"></picture></p>
 
-I ship AI products end to end, from the data model to the app in your hand. Head of Product at [Mano Wellness](https://manowellness.app).
+Shipping apps and AI products end to end. Currently Head of Product at [Mano Wellness](https://manowellness.app).
 
 #### Work
 
 - Head of Product, [Mano Wellness](https://manowellness.app)
-  - Built Manny, an AI health coach in Swift and React on Supabase that reads wearables, sleep and nutrition. Hundreds of users and 4+ corporate clients since launch.
+  - AI health coach on iOS and web. Hundreds of users, 4+ corporate clients.
 - AI Strategy & Automations, [Direct Journeyline Holdings](https://www.directjh.com)
-  - Automated month-end reconciliation, reporting and forecasting across a multi-company portfolio. Saves the team 10+ hours a week.
+  - Automated month-end close and forecasting. 10+ hours saved a week.
 - Co-founder & Lead Engineer, [Diffuse](https://www.diffuse.press)
-  - Built an AI newsroom on Next.js and Supabase that turns recordings and documents into articles. 26,000+ monthly pageviews across 3 sites, profitable in 4 months.
+  - AI newsroom on Next.js and Supabase. 26K monthly pageviews, profitable in 4 months.
 - Co-founder, [CogNodes](https://cognodes.com)
-  - Shipped AI products for 8 paying clients, from RAG assistants to mobile apps.
+  - AI products for 8 paying clients.
 - Agentic AI Intern, [US HealthConnect](https://www.ushealthconnect.com)
-  - Built 2 AI agents and 6 automation workflows for finance and compliance teams, cutting turnaround time 35%.
+  - 2 AI agents and 6 workflows. Turnaround down 35%.
 
 #### Education & leadership
 
 - CTO, [Garnet Fund](https://www.garnetfund.org)
-  - Built the risk platform for USC's first student-run fund, a $100K+ long/short book with 35+ members.
-- Finance & Business Analytics, University of South Carolina
-  - Class of 2028, 3.72 GPA.
+  - Built the risk platform for a $100K+ student-run fund.
+- University of South Carolina
+  - Finance & Business Analytics, class of 2028. 3.72 GPA.
 - President, Sigma Phi Epsilon
   - 230+ members, first on campus in GPA and size.
 
