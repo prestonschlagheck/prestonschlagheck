@@ -264,10 +264,10 @@ const picture = (name, alt, attr) =>
 function readme(p) {
 	const so = p.socials;
 	const socials = [
-		so.x && ['social-x', `https://x.com/${so.x}`, `X @${so.x}`],
-		so.linkedin && ['social-linkedin', `https://linkedin.com/in/${so.linkedin}`, `LinkedIn ${so.linkedin}`],
 		so.site && ['social-site', `https://${so.site.replace(/^https?:\/\//, '')}`, so.site],
 		so.email && ['social-email', `mailto:${so.email}`, so.email],
+		so.linkedin && ['social-linkedin', `https://linkedin.com/in/${so.linkedin}`, `LinkedIn ${so.linkedin}`],
+		so.x && ['social-x', `https://x.com/${so.x}`, `X @${so.x}`],
 	].filter(Boolean);
 	const sections = Object.entries(p.sections)
 		.map(([title, items]) => `#### ${title}\n\n${items.map((i) => `- ${i.head}\n${i.points.map((pt) => `  - ${pt}`).join('\n')}`).join('\n')}`)
