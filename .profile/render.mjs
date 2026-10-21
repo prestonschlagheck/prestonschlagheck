@@ -273,7 +273,7 @@ ${r.star ? starMark(r) : ''}
 		['Daily Average, 90 Days', fmt(Math.round(days.slice(-90).reduce((n, d) => n + d.count, 0) / 90))],
 		['Best Day', fmt(s.best.count)],
 	]
-		.map(([k, v], i) => `${k === 'Best Day' ? `<g transform="translate(${i * (W / 4)} ${H + LIFT - 40})">${star(theme, 10)}</g>` : ''}<text x="${i * (W / 4) + (k === 'Best Day' ? 15 : 0)}" y="${H + LIFT - 30}" font-size="13" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H + LIFT - 7}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
+		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H + LIFT - 30}" font-size="13" fill="${t.muted}">${k}${k === 'Best Day' ? `<tspan dx="5" font-size="11" fill="${GOLD[theme]}">★</tspan>` : ''}</text><text x="${i * (W / 4)}" y="${H + LIFT - 7}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
 		.join('');
 
 	const since = new Date(days[0].date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
