@@ -145,11 +145,7 @@ function ticker(theme, profile, cal) {
 			return { u, f, count, pct: pct === null ? null : Math.round((pct * count) / Math.max(1, total)), len: at(f, len) / L };
 		});
 		const d = 'M' + pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L');
-		// The busiest single day in the range, marked once the line has drawn past it.
-		let pi = 0;
-		days.slice(start).forEach((d, i) => d.count > days[start + pi].count && (pi = i));
-		const peak = { x: pts[pi][0], y: pts[pi][1], date: days[start + pi].date, count: days[start + pi].count };
-		return { ...r, k, t0: k * slot, total, pct, d, frames, peak };
+		return { ...r, k, t0: k * slot, total, pct, d, frames };
 	});
 
 	// Visible for its own slot only. Keyframes are nudged apart so no two land on the same time.
@@ -178,19 +174,6 @@ function ticker(theme, profile, cal) {
 			.join('');
 	};
 
-	// A crosshair at the peak: hairline, a dot on the line, and the day's date and count. It fades
-	// in when the draw finishes and leaves with the rest of the range.
-	const marker = (r) => {
-		const { x, y, date, count } = r.peak;
-		const label = `${new Date(date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} · ${fmt(count)}`;
-		const anchor = x > W - 70 ? 'end' : x < 70 ? 'start' : 'middle';
-		const a = r.t0 + DRAW, b = a + 0.5;
-		return `<g opacity="${r.k === 0 ? 1 : 0}"><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${kt(a)};${kt(b)};1" dur="${T}s" repeatCount="indefinite"/>
-<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${top - 6}" y2="${bottom}" stroke="${t.muted}" stroke-opacity="0.55" stroke-width="1"/>
-<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${gain}"/>
-<text x="${x.toFixed(1)}" y="${top - 12}" text-anchor="${anchor}" font-size="12" font-weight="500" fill="${t.muted}">${label}</text></g>`;
-	};
-
 	const groups = ranges
 		.map((r) => {
 			const up = r.pct === null || r.pct >= 0;
@@ -206,7 +189,6 @@ function ticker(theme, profile, cal) {
 			return `<g opacity="${r.k === 0 ? 1 : 0}">${showing(r)}
 <defs><clipPath id="c${r.k}"><rect x="-4" y="0" width="${W + 8}" height="${H}"><animate attributeName="width" values="${r.t0 > 0 ? '0;' : ''}${r.frames.map((fr) => (fr.f * (W - 8) + 4).toFixed(1)).join(';')};${W + 8}" keyTimes="${r.t0 > 0 ? '0;' : ''}${r.frames.map((fr) => kt(r.t0 + fr.u * DRAW)).join(';')};1" dur="${T}s" repeatCount="indefinite"/></rect></clipPath></defs>
 <path id="p${r.k}" d="${r.d}" fill="none" stroke="${gain}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" clip-path="url(#c${r.k})"/>
-${marker(r)}
 <circle r="4.5" fill="${gain}" cx="0" cy="0"><animateMotion dur="${T}s" repeatCount="indefinite" calcMode="linear" keyPoints="${motion.map((m) => m[1]).join(';')}" keyTimes="${motion.map((m) => kt(m[0])).join(';')}"><mpath href="#p${r.k}"/></animateMotion></circle>
 ${big}
 ${sub}
@@ -230,7 +212,7 @@ ${sub}
 		.join('');
 	// The last year's contribution calendar, tone on tone behind the line: one cell per day, a
 	// column per week, filled by quartile like GitHub's own graph but barely there.
-	const weeks = 53, gy = top - 14, cw = W / weeks, ch = (bottom - gy) / 7;
+	const weeks = 53, cw = W / weeks, ch = cw, gy = bottom - 12 - 7 * ch;
 	const recent = days.slice(-(weeks * 7 - (6 - new Date(days.at(-1).date + 'T00:00:00Z').getUTCDay())));
 	const nonzero = recent.map((d) => d.count).filter(Boolean).sort((a, b) => a - b);
 	const q = (f) => nonzero[Math.floor(f * (nonzero.length - 1))] ?? 1;
@@ -240,7 +222,7 @@ ${sub}
 	const grid = recent
 		.map((d, i) => {
 			const col = Math.floor((i + offset) / 7), row = (i + offset) % 7;
-			return `<rect x="${(col * cw + 1.5).toFixed(1)}" y="${(gy + row * ch + 1.5).toFixed(1)}" width="${(cw - 3).toFixed(1)}" height="${(ch - 3).toFixed(1)}" rx="2.5" fill-opacity="${shade[level(d.count)]}"/>`;
+			return `<rect x="${(col * cw + 1.5).toFixed(1)}" y="${(gy + row * ch + 1.5).toFixed(1)}" width="${(cw - 3.5).toFixed(1)}" height="${(ch - 3.5).toFixed(1)}" rx="3" fill-opacity="${shade[level(d.count)]}"/>`;
 		})
 		.join('');
 	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom + 0.5}" r="1"/>`).join('');
