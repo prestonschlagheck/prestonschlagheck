@@ -21,8 +21,10 @@ const GAIN = { dark: '#00c805', light: '#00a804' };
 const LOSS = '#ff5000';
 
 const fmt = (n) => n.toLocaleString('en-US');
-// A small gold star, 12px, for the best day in the chart and in the stats.
-const STAR = `<path fill="#f5b800" transform="scale(0.5)" d="M12 1.8l3.1 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.6l-6.4 3.6 1.5-7.1-5.4-4.9 7.2-.8z"/>`;
+// The best-day star, in GitHub's own gold for each theme so it sits with the rest of the page.
+const GOLD = { dark: '#e3b341', light: '#bf8700' };
+const star = (theme, size) =>
+	`<path fill="${GOLD[theme]}" transform="scale(${(size / 24).toFixed(4)})" d="M12 1.8l3.1 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.6l-6.4 3.6 1.5-7.1-5.4-4.9 7.2-.8z"/>`;
 // Width of a number set in tabular figures: generous, so a label placed after it never collides.
 const numWidth = (str, size, spacing) =>
 	[...str].reduce((w, c) => w + (/\d/.test(c) ? 0.62 : c === ',' ? 0.3 : c === '%' ? 0.9 : 0.62) * size + spacing, 0);
@@ -192,7 +194,7 @@ function ticker(theme, profile, cal) {
 	const starMark = (r) => {
 		const { x, y, f } = r.star;
 		const a = r.t0 + (Math.acos(1 - 2 * Math.min(1, f)) / Math.PI) * DRAW;
-		return `<g transform="translate(${(x - 6).toFixed(1)} ${(y - 18).toFixed(1)})" opacity="${r.k === 0 ? 1 : 0}"><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${kt(a)};${kt(a + 0.35)};1" dur="${T}s" repeatCount="indefinite"/>${STAR}</g>`;
+		return `<g transform="translate(${(x - 5.5).toFixed(1)} ${(y - 17).toFixed(1)})" opacity="${r.k === 0 ? 1 : 0}"><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${kt(a)};${kt(a + 0.35)};1" dur="${T}s" repeatCount="indefinite"/>${star(theme, 11)}</g>`;
 	};
 
 	const groups = ranges
@@ -205,7 +207,7 @@ function ticker(theme, profile, cal) {
 			const sub =
 				r.pct === null
 					? `<text x="0" y="138" font-size="15" fill="${t.muted}">Past ${r.days === 365 ? 'year' : `${r.days} days`}</text>`
-					: `<g class="sub" fill="${tone}">${ticking(r, (fr) => `<text y="138">${up ? '+' : '−'}${fmt(Math.abs(fr.pct))}%</text>`)}</g><text x="${(numWidth(`+${fmt(Math.abs(r.pct))}%`, 15, 0) + 5).toFixed(1)}" y="138" class="sub vs">${r.versus}</text>`;
+					: `<g class="sub" fill="${tone}">${ticking(r, (fr) => `<text y="138">${up ? '+' : '−'}${fmt(Math.abs(fr.pct))}%</text>`)}</g><text x="${(numWidth(`+${fmt(Math.abs(r.pct))}%`, 15, 0.6) + 8).toFixed(1)}" y="138" class="sub vs">${r.versus}</text>`;
 			// The clip widens with x at a constant rate, and the dot rides the path to match it.
 			const keyPoints = r.frames.map((fr) => fr.len.toFixed(4));
 			const motion = [[0, 0], ...(r.t0 > 0 ? [[r.t0 - 0.001, 0]] : []), ...r.frames.map((fr, j) => [r.t0 + fr.u * DRAW, keyPoints[j]]), [T, 1]];
@@ -268,7 +270,7 @@ ${r.star ? starMark(r) : ''}
 		['Daily Average, 90 Days', fmt(Math.round(days.slice(-90).reduce((n, d) => n + d.count, 0) / 90))],
 		['Best Day', fmt(s.best.count)],
 	]
-		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H + LIFT - 30}" font-size="13" fill="${t.muted}">${k}</text>${k === 'Best Day' ? `<g transform="translate(${(i * (W / 4) + textWidth(k, 13) + 6).toFixed(1)} ${H + LIFT - 41})">${STAR}</g>` : ''}<text x="${i * (W / 4)}" y="${H + LIFT - 7}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
+		.map(([k, v], i) => `${k === 'Best Day' ? `<g transform="translate(${i * (W / 4)} ${H + LIFT - 40})">${star(theme, 10)}</g>` : ''}<text x="${i * (W / 4) + (k === 'Best Day' ? 15 : 0)}" y="${H + LIFT - 30}" font-size="13" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H + LIFT - 7}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
 		.join('');
 
 	const since = new Date(days[0].date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
