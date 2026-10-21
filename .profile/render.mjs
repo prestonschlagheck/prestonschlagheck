@@ -125,7 +125,8 @@ function ticker(theme, profile, cal) {
 		// Trailing r.smooth-day total per day. Plotted point to point, so it stays jagged.
 		const series = days.slice(start).map((_, i) => sum(start + i - r.smooth + 1, start + i + 1));
 		const max = Math.max(1, ...series);
-		const pts = series.map((v, i) => [(i / Math.max(1, span - 1)) * W, bottom - (v / max) * (bottom - top)]);
+		// The line stops short of the right edge so the 4.5px dot (and its ring) never clips.
+		const pts = series.map((v, i) => [(i / Math.max(1, span - 1)) * (W - 8), bottom - (v / max) * (bottom - top)]);
 		// Cumulative count and cumulative path length at each point, so the counter and the dot
 		// both track the line's x position rather than time or arc length.
 		const cum = [], len = [0];
@@ -186,7 +187,7 @@ function ticker(theme, profile, cal) {
 			const keyPoints = r.frames.map((fr) => fr.len.toFixed(4));
 			const motion = [[0, 0], ...(r.t0 > 0 ? [[r.t0 - 0.001, 0]] : []), ...r.frames.map((fr, j) => [r.t0 + fr.u * DRAW, keyPoints[j]]), [T, 1]];
 			return `<g opacity="${r.k === 0 ? 1 : 0}">${showing(r)}
-<defs><clipPath id="c${r.k}"><rect x="-4" y="0" width="${W + 8}" height="${H}"><animate attributeName="width" values="${r.t0 > 0 ? '0;' : ''}${r.frames.map((fr) => (fr.f * W + 4).toFixed(1)).join(';')};${W + 8}" keyTimes="${r.t0 > 0 ? '0;' : ''}${r.frames.map((fr) => kt(r.t0 + fr.u * DRAW)).join(';')};1" dur="${T}s" repeatCount="indefinite"/></rect></clipPath></defs>
+<defs><clipPath id="c${r.k}"><rect x="-4" y="0" width="${W + 8}" height="${H}"><animate attributeName="width" values="${r.t0 > 0 ? '0;' : ''}${r.frames.map((fr) => (fr.f * (W - 8) + 4).toFixed(1)).join(';')};${W + 8}" keyTimes="${r.t0 > 0 ? '0;' : ''}${r.frames.map((fr) => kt(r.t0 + fr.u * DRAW)).join(';')};1" dur="${T}s" repeatCount="indefinite"/></rect></clipPath></defs>
 <path id="p${r.k}" d="${r.d}" fill="none" stroke="${gain}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" clip-path="url(#c${r.k})"/>
 <circle r="4.5" fill="${gain}" cx="0" cy="0"><animateMotion dur="${T}s" repeatCount="indefinite" calcMode="linear" keyPoints="${motion.map((m) => m[1]).join(';')}" keyTimes="${motion.map((m) => kt(m[0])).join(';')}"><mpath href="#p${r.k}"/></animateMotion></circle>
 ${big}
