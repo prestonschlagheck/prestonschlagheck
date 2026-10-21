@@ -1,0 +1,46 @@
+# Redraws the profile images every six hours, and whenever profile.json or the renderer changes.
+name: profile
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+  push:
+    paths: [profile.json, .profile/**, .github/workflows/profile.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: profile
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Render
+        run: node .profile/render.mjs
+        env:
+          LOGIN: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Publish images to the output branch
+        working-directory: dist
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          git init -q -b output
+          git add .
+          git -c user.name=profile-bot -c user.email=profile-bot@users.noreply.github.com commit -qm "Render profile images"
+          git push -qf "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" output
+      - name: Commit the README when it changed
+        run: |
+          if git diff --quiet README.md && git ls-files --error-unmatch README.md >/dev/null 2>&1; then exit 0; fi
+          git add README.md
+          git -c user.name=profile-bot -c user.email=profile-bot@users.noreply.github.com commit -qm "Update profile README"
+          git push -q
