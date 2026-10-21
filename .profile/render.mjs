@@ -197,16 +197,18 @@ ${sub}
 		.join('\n');
 
 	const tabW = 52, tabY = 362;
+	// Tabs read short to long, left to right, while the loop plays them long to short.
+	const tabX = (r) => (ranges.length - 1 - r.k) * tabW;
 	const ul = [];
 	ranges.forEach((r) => {
-		ul.push([r.t0 + (r.k ? 0.001 : 0), r.k * tabW + 10]);
-		ul.push([r.t0 + DRAW + HOLD + FADE - 0.002, r.k * tabW + 10]);
+		ul.push([r.t0 + (r.k ? 0.001 : 0), tabX(r) + 10]);
+		ul.push([r.t0 + DRAW + HOLD + FADE - 0.002, tabX(r) + 10]);
 	});
 	ul[0][0] = 0;
-	ul.push([T, 10]);
-	const underline = `<rect x="10" y="${tabY + 10}" width="${tabW - 20}" height="2" rx="1" fill="${gain}"><animate attributeName="x" values="${ul.map((u) => u[1]).join(';')}" keyTimes="${ul.map((u) => kt(u[0])).join(';')}" dur="${T}s" repeatCount="indefinite"/></rect>`;
+	ul.push([T, tabX(ranges[0]) + 10]);
+	const underline = `<rect x="${tabX(ranges[0]) + 10}" y="${tabY + 10}" width="${tabW - 20}" height="2" rx="1" fill="${gain}"><animate attributeName="x" values="${ul.map((u) => u[1]).join(';')}" keyTimes="${ul.map((u) => kt(u[0])).join(';')}" dur="${T}s" repeatCount="indefinite"/></rect>`;
 	const tabs = ranges
-		.map((r) => `<text x="${r.k * tabW + tabW / 2}" y="${tabY}" text-anchor="middle" fill="${t.ink}">${r.tab}</text><text x="${r.k * tabW + tabW / 2}" y="${tabY}" text-anchor="middle" fill="${gain}" opacity="${r.k === 0 ? 1 : 0}">${r.tab}${showing(r)}</text>`)
+		.map((r) => `<text x="${tabX(r) + tabW / 2}" y="${tabY}" text-anchor="middle" fill="${t.ink}">${r.tab}</text><text x="${tabX(r) + tabW / 2}" y="${tabY}" text-anchor="middle" fill="${gain}" opacity="${r.k === 0 ? 1 : 0}">${r.tab}${showing(r)}</text>`)
 		.join('');
 	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom + 0.5}" r="1"/>`).join('');
 	const statsRow = [
