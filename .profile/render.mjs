@@ -206,8 +206,8 @@ function ticker(theme, profile, cal) {
 			const big = `<g class="big">${ticking(r, (fr) => `<text y="104">${fmt(fr.count)}</text>`)}</g><text x="${(numWidth(fmt(r.total), 44, -1) + 12).toFixed(1)}" y="104" class="lbl">contributions</text>`;
 			const sub =
 				r.pct === null
-					? `<text x="0" y="138" font-size="15" fill="${t.muted}">Past ${r.days === 365 ? 'year' : `${r.days} days`}</text>`
-					: `<g class="sub" fill="${tone}">${ticking(r, (fr) => `<text y="138">${up ? '+' : '−'}${fmt(Math.abs(fr.pct))}%</text>`)}</g><text x="${(numWidth(`+${fmt(Math.abs(r.pct))}%`, 15, 0.6) + 8).toFixed(1)}" y="138" class="sub vs">${r.versus}</text>`;
+					? `<text x="0" y="138" font-size="14" fill="${t.muted}">Past ${r.days === 365 ? 'year' : `${r.days} days`}</text>`
+					: `<g class="sub" fill="${tone}">${ticking(r, (fr) => `<text y="138">${up ? '+' : '−'}${fmt(Math.abs(fr.pct))}%</text>`)}</g><text x="${(numWidth(`+${fmt(Math.abs(r.pct))}%`, 14, 0.6) + 7).toFixed(1)}" y="138" class="sub vs">${r.versus}</text>`;
 			// The clip widens with x at a constant rate, and the dot rides the path to match it.
 			const keyPoints = r.frames.map((fr) => fr.len.toFixed(4));
 			const motion = [[0, 0], ...(r.t0 > 0 ? [[r.t0 - 0.001, 0]] : []), ...r.frames.map((fr, j) => [r.t0 + fr.u * DRAW, keyPoints[j]]), [T, 1]];
@@ -273,18 +273,18 @@ ${r.star ? starMark(r) : ''}
 		['Daily Average, 90 Days', fmt(Math.round(days.slice(-90).reduce((n, d) => n + d.count, 0) / 90))],
 		['Best Day', fmt(s.best.count)],
 	]
-		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H + LIFT - 30}" font-size="13" fill="${t.muted}">${k}${k === 'Best Day' ? `<tspan dx="5" font-size="11" fill="${GOLD[theme]}">★</tspan>` : ''}</text><text x="${i * (W / 4)}" y="${H + LIFT - 7}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
+		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H + LIFT - 31}" font-size="12" fill="${t.muted}">${k}${k === 'Best Day' ? `<tspan dx="4" font-size="11" fill="${GOLD[theme]}">★</tspan>` : ''}</text><text x="${i * (W / 4)}" y="${H + LIFT - 6}" font-size="18" font-weight="600" fill="${t.ink}">${v}</text>`)
 		.join('');
 
 	const since = new Date(days[0].date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 	const label = `${profile.fullName}: ${fmt(cal.total)} GitHub contributions since ${since}, ${fmt(ranges[0].total)} in the past ${ranges[0].tab === '1Y' ? 'year' : `${ranges[0].days} days`}`;
 	const body = `
-<style>.big{font-size:44px;font-weight:700;letter-spacing:-1px;fill:${t.ink};font-variant-numeric:tabular-nums}.lbl{font-size:15px;font-weight:400;letter-spacing:0;fill:${t.muted}}.sub{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}.vs{font-weight:400;fill:${t.muted}}</style>
+<style>.big{font-size:44px;font-weight:700;letter-spacing:-1px;fill:${t.ink};font-variant-numeric:tabular-nums}.lbl{font-size:15px;font-weight:400;letter-spacing:0;fill:${t.muted}}.sub{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}.vs{font-weight:400;fill:${t.muted}}</style>
 <g transform="translate(0 -${LIFT})">
 <g fill="${t.rule}">${grid}</g>
 <g fill="${t.rule}" fill-opacity="${(t.ruleOp * 2.2).toFixed(2)}">${dots}</g>
 ${groups}
-<g font-size="13" font-weight="700" letter-spacing="0.3">${tabs}</g>
+<g font-size="12" font-weight="700" letter-spacing="0.4">${tabs}</g>
 ${underline}
 <rect x="0" y="${tabY + 24}" width="${W}" height="1" fill="${t.rule}" fill-opacity="${t.ruleOp}"/>
 ${statsRow}
