@@ -177,17 +177,37 @@ function ticker(theme, profile, cal) {
 			.join('');
 	};
 
+	// The widest number with as many digits as n: 7 -> 8, 64 -> 88, 1,250 -> 8,888.
+	const widest = (n) => Number('8'.repeat(String(Math.max(0, Math.round(n))).length));
+	// A label that moves right by one digit's width each time the value beside it gains a digit,
+	// easing over a fifth of a second, on the same clock as the count.
+	const sliding = (r, value, xFor, label) => {
+		const keys = [[0, xFor(value(r.frames[0])), '0 0 1 1']];
+		let digits = String(Math.round(value(r.frames[0]))).length;
+		for (const fr of r.frames) {
+			const d = String(Math.round(value(fr))).length;
+			if (d === digits) continue;
+			const at = r.t0 + fr.u * DRAW;
+			keys.push([Math.max(at, keys.at(-1)[0] + 0.001), keys.at(-1)[1], '.3 0 .2 1'], [at + 0.22, xFor(value(fr)), '0 0 1 1']);
+			digits = d;
+		}
+		keys.push([T, keys.at(-1)[1]]);
+		const final = xFor(value(r.frames.at(-1)));
+		return `<g transform="translate(${final.toFixed(1)} 0)"><animateTransform attributeName="transform" type="translate" values="${keys.map((k) => `${k[1].toFixed(1)} 0`).join(';')}" keyTimes="${keys.map((k) => kt(k[0])).join(';')}" calcMode="spline" keySplines="${keys.slice(0, -1).map((k) => k[2]).join(';')}" dur="${T}s" repeatCount="indefinite"/>${label}</g>`;
+	};
+
 	const groups = ranges
 		.map((r) => {
 			const up = r.pct === null || r.pct >= 0;
 			const tone = up ? gain : LOSS;
-			// Digits are tabular, and each label sits at a fixed x just past the final value's width,
-			// so only the number changes while it counts and nothing beside it moves.
-			const big = `<g class="big">${ticking(r, (fr) => `<text y="104">${fmt(fr.count)}</text>`)}</g><text x="${(numWidth(fmt(r.total), 44, -1) + 12).toFixed(1)}" y="104" class="lbl">contributions</text>`;
+			// Digits are tabular, so the number's width only changes when it gains a digit. Each label
+			// sits just past the widest number with that many digits and glides one place right when
+			// the count gains a digit, instead of twitching with every frame.
+			const big = `<g class="big">${ticking(r, (fr) => `<text y="104">${fmt(fr.count)}</text>`)}</g>${sliding(r, (fr) => fr.count, (n) => numWidth(fmt(widest(n)), 44, -1) + 12, `<text y="104" class="lbl">contributions</text>`)}`;
 			const sub =
 				r.pct === null
 					? `<text x="0" y="138" font-size="14" fill="${t.muted}">Past ${r.days === 365 ? 'year' : `${r.days} days`}</text>`
-					: `<g class="sub" fill="${tone}">${ticking(r, (fr) => `<text y="138">${up ? '+' : '−'}${fmt(Math.abs(fr.pct))}%</text>`)}</g><text x="${(numWidth(`+${fmt(Math.abs(r.pct))}%`, 14, 0.6) + 7).toFixed(1)}" y="138" class="sub vs">${r.versus}</text>`;
+					: `<g class="sub" fill="${tone}">${ticking(r, (fr) => `<text y="138">${up ? '+' : '−'}${fmt(Math.abs(fr.pct))}%</text>`)}</g>${sliding(r, (fr) => Math.abs(fr.pct), (n) => numWidth(`+${fmt(widest(n))}%`, 14, 0.6) + 7, `<text y="138" class="sub vs">${r.versus}</text>`)}`;
 			// The clip widens with x at a constant rate, and the dot rides the path to match it.
 			const keyPoints = r.frames.map((fr) => fr.len.toFixed(4));
 			const motion = [[0, 0], ...(r.t0 > 0 ? [[r.t0 - 0.001, 0]] : []), ...r.frames.map((fr, j) => [r.t0 + fr.u * DRAW, keyPoints[j]]), [T, 1]];
