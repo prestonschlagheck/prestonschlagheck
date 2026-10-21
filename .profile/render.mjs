@@ -21,6 +21,11 @@ const GAIN = { dark: '#00c805', light: '#00a804' };
 const LOSS = '#ff5000';
 
 const fmt = (n) => n.toLocaleString('en-US');
+// A small gold star, 12px, for the best day in the chart and in the stats.
+const STAR = `<path fill="#f5b800" transform="scale(0.5)" d="M12 1.8l3.1 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.6l-6.4 3.6 1.5-7.1-5.4-4.9 7.2-.8z"/>`;
+// Width of a number set in tabular figures: generous, so a label placed after it never collides.
+const numWidth = (str, size, spacing) =>
+	[...str].reduce((w, c) => w + (/\d/.test(c) ? 0.62 : c === ',' ? 0.3 : c === '%' ? 0.9 : 0.62) * size + spacing, 0);
 const esc = (s) =>
 	String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const svg = (w, h, label, body) =>
@@ -116,6 +121,7 @@ function ticker(theme, profile, cal) {
 	const kt = (sec) => +Math.min(1, Math.max(0, sec / T)).toFixed(5);
 	const sum = (a, b) => days.slice(Math.max(0, a), Math.max(0, b)).reduce((n, d) => n + d.count, 0);
 
+	const bestCount = Math.max(...days.map((d) => d.count));
 	const ranges = active.map((r, k) => {
 		const span = Math.min(r.days, days.length);
 		const start = days.length - span;
@@ -145,7 +151,16 @@ function ticker(theme, profile, cal) {
 			return { u, f, count, pct: pct === null ? null : Math.round((pct * count) / Math.max(1, total)), len: at(f, len) / L };
 		});
 		const d = 'M' + pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L');
-		return { ...r, k, t0: k * slot, total, pct, d, frames };
+		// The best day sits inside a smoothing window, so the star goes over the highest point of
+		// the line within that window rather than over the raw day.
+		const bi = days.length - 1 - [...days].reverse().findIndex((d) => d.count === bestCount) - start;
+		let star = null;
+		if (bi >= 0) {
+			let hi = bi;
+			for (let i = Math.max(0, bi - r.smooth); i <= Math.min(pts.length - 1, bi + r.smooth); i++) if (pts[i][1] < pts[hi][1]) hi = i;
+			star = { x: pts[hi][0], y: pts[hi][1], f: pts[hi][0] / (W - 8) };
+		}
+		return { ...r, k, t0: k * slot, total, pct, d, frames, star };
 	});
 
 	// Visible for its own slot only. Keyframes are nudged apart so no two land on the same time.
@@ -174,15 +189,23 @@ function ticker(theme, profile, cal) {
 			.join('');
 	};
 
+	const starMark = (r) => {
+		const { x, y, f } = r.star;
+		const a = r.t0 + (Math.acos(1 - 2 * Math.min(1, f)) / Math.PI) * DRAW;
+		return `<g transform="translate(${(x - 6).toFixed(1)} ${(y - 18).toFixed(1)})" opacity="${r.k === 0 ? 1 : 0}"><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${kt(a)};${kt(a + 0.35)};1" dur="${T}s" repeatCount="indefinite"/>${STAR}</g>`;
+	};
+
 	const groups = ranges
 		.map((r) => {
 			const up = r.pct === null || r.pct >= 0;
 			const tone = up ? gain : LOSS;
-			const big = `<g class="big">${ticking(r, (fr) => `<text y="104">${fmt(fr.count)}<tspan dx="12" class="lbl">contributions</tspan></text>`)}</g>`;
+			// Digits are tabular, and each label sits at a fixed x just past the final value's width,
+			// so only the number changes while it counts and nothing beside it moves.
+			const big = `<g class="big">${ticking(r, (fr) => `<text y="104">${fmt(fr.count)}</text>`)}</g><text x="${(numWidth(fmt(r.total), 44, -1) + 12).toFixed(1)}" y="104" class="lbl">contributions</text>`;
 			const sub =
 				r.pct === null
 					? `<text x="0" y="138" font-size="15" fill="${t.muted}">Past ${r.days === 365 ? 'year' : `${r.days} days`}</text>`
-					: `<g class="sub" fill="${tone}">${ticking(r, (fr) => `<text y="138">${up ? '+' : '−'}${fmt(Math.abs(fr.pct))}%<tspan class="vs"> ${r.versus}</tspan></text>`)}</g>`;
+					: `<g class="sub" fill="${tone}">${ticking(r, (fr) => `<text y="138">${up ? '+' : '−'}${fmt(Math.abs(fr.pct))}%</text>`)}</g><text x="${(numWidth(`+${fmt(Math.abs(r.pct))}%`, 15, 0) + 5).toFixed(1)}" y="138" class="sub vs">${r.versus}</text>`;
 			// The clip widens with x at a constant rate, and the dot rides the path to match it.
 			const keyPoints = r.frames.map((fr) => fr.len.toFixed(4));
 			const motion = [[0, 0], ...(r.t0 > 0 ? [[r.t0 - 0.001, 0]] : []), ...r.frames.map((fr, j) => [r.t0 + fr.u * DRAW, keyPoints[j]]), [T, 1]];
@@ -192,6 +215,7 @@ function ticker(theme, profile, cal) {
 <circle r="4.5" fill="${gain}" cx="0" cy="0"><animateMotion dur="${T}s" repeatCount="indefinite" calcMode="linear" keyPoints="${motion.map((m) => m[1]).join(';')}" keyTimes="${motion.map((m) => kt(m[0])).join(';')}"><mpath href="#p${r.k}"/></animateMotion></circle>
 ${big}
 ${sub}
+${r.star ? starMark(r) : ''}
 </g>`;
 		})
 		.join('\n');
@@ -239,18 +263,18 @@ ${sub}
 		.join('');
 	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom + 0.5}" r="1"/>`).join('');
 	const statsRow = [
-		['All time', fmt(cal.total)],
-		['Last 90 days', fmt(days.slice(-90).reduce((n, d) => n + d.count, 0))],
-		['Daily average, 90 days', fmt(Math.round(days.slice(-90).reduce((n, d) => n + d.count, 0) / 90))],
-		['Best day', fmt(s.best.count)],
+		['All Time', fmt(cal.total)],
+		['Last 90 Days', fmt(days.slice(-90).reduce((n, d) => n + d.count, 0))],
+		['Daily Average, 90 Days', fmt(Math.round(days.slice(-90).reduce((n, d) => n + d.count, 0) / 90))],
+		['Best Day', fmt(s.best.count)],
 	]
-		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H + LIFT - 30}" font-size="13" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H + LIFT - 7}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
+		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H + LIFT - 30}" font-size="13" fill="${t.muted}">${k}</text>${k === 'Best Day' ? `<g transform="translate(${(i * (W / 4) + textWidth(k, 13) + 6).toFixed(1)} ${H + LIFT - 41})">${STAR}</g>` : ''}<text x="${i * (W / 4)}" y="${H + LIFT - 7}" font-size="17" font-weight="600" fill="${t.ink}">${v}</text>`)
 		.join('');
 
 	const since = new Date(days[0].date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 	const label = `${profile.fullName}: ${fmt(cal.total)} GitHub contributions since ${since}, ${fmt(ranges[0].total)} in the past ${ranges[0].tab === '1Y' ? 'year' : `${ranges[0].days} days`}`;
 	const body = `
-<style>.big{font-size:44px;font-weight:700;letter-spacing:-1px;fill:${t.ink}}.lbl{font-size:15px;font-weight:400;letter-spacing:0;fill:${t.muted}}.sub{font-size:15px;font-weight:600}.vs{font-weight:400;fill:${t.muted}}</style>
+<style>.big{font-size:44px;font-weight:700;letter-spacing:-1px;fill:${t.ink};font-variant-numeric:tabular-nums}.lbl{font-size:15px;font-weight:400;letter-spacing:0;fill:${t.muted}}.sub{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}.vs{font-weight:400;fill:${t.muted}}</style>
 <g transform="translate(0 -${LIFT})">
 <g fill="${t.rule}">${grid}</g>
 <g fill="${t.rule}" fill-opacity="${(t.ruleOp * 2.2).toFixed(2)}">${dots}</g>
