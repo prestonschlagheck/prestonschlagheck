@@ -3,8 +3,7 @@
   "fullName": "Preston Schlagheck",
   "ticker": "PRES",
   "intro": [
-    "I'm Head of Product at [Mano Wellness](https://manowellness.app). We built Manny, an AI health coach on [iPhone](https://apps.apple.com/us/app/manny-your-personal-trainer/id6783495822) and the [web](https://manowellness.app) that reads your wearables, sleep and nutrition. It's live with 4+ corporate clients.",
-    "I'm also a full-time finance student at South Carolina, so most of this gets built at night. The chart counts private repos too."
+    "I build AI products from first prototype to launch. Right now I'm Head of Product at [Mano Wellness](https://manowellness.app)."
   ],
   "socials": {
     "x": "prestonschlag",
@@ -13,17 +12,67 @@
     "email": "prestonschlagheck@gmail.com"
   },
   "sections": {
-    "Experience": [
-      "Head of Product @ [Mano Wellness](https://manowellness.app) (AI health coach on iOS and web, 4+ corporate clients)",
-      "Co-founder & Lead Engineer @ [Diffuse](https://www.diffuse.press) (AI newsroom, 26k+ monthly pageviews, profitable in 4 months)",
-      "Co-founder @ [CogNodes](https://cognodes.com) (AI agents and production builds for 8 paying clients)",
-      "AI Strategy & Automations @ [Direct Journeyline Holdings](https://www.directjh.com) (10+ hours a week saved on month-end)",
-      "Agentic AI Intern @ [US HealthConnect](https://www.ushealthconnect.com) (2 AI agents, 6 workflows, 35% faster turnaround)"
+    "Work": [
+      {
+        "head": "Head of Product, [Mano Wellness](https://manowellness.app)",
+        "points": [
+          "Launched Manny, a private AI health coach on [iPhone](https://apps.apple.com/us/app/manny-your-personal-trainer/id6783495822) and the [web](https://manowellness.app) that reads wearables, sleep and nutrition",
+          "Serving hundreds of users and 4+ corporate clients with no paid marketing"
+        ]
+      },
+      {
+        "head": "AI Strategy & Automations, [Direct Journeyline Holdings](https://www.directjh.com)",
+        "points": [
+          "Automated month-end reconciliation, reporting and forecasting across a multi-company truck parking and logistics portfolio",
+          "Saves the team 10+ hours a week"
+        ]
+      },
+      {
+        "head": "Co-founder & Lead Engineer, [Diffuse](https://www.diffuse.press)",
+        "points": [
+          "Built an AI newsroom that let one person run a county's local news",
+          "26,000+ monthly pageviews across 3 sites, profitable in 4 months"
+        ]
+      },
+      {
+        "head": "Co-founder, [CogNodes](https://cognodes.com)",
+        "points": [
+          "AI strategy and production builds for 8 paying clients, including Mano and Lookr"
+        ]
+      },
+      {
+        "head": "Generative & Agentic AI Intern, [US HealthConnect](https://www.ushealthconnect.com)",
+        "points": [
+          "Built 6 automation workflows and 2 AI agents for finance, compliance and operations",
+          "Cut turnaround time 35%"
+        ]
+      }
     ],
-    "Accomplishments": [
-      "CTO @ [Garnet Fund](https://www.garnetfund.org) (built the risk platform for USC's first student-run fund)",
-      "President @ Sigma Phi Epsilon, SC Alpha (230+ members)",
-      "Finance + Business Analytics @ University of South Carolina '28"
+    "Education & leadership": [
+      {
+        "head": "University of South Carolina, B.S. Business Administration (2028)",
+        "points": [
+          "Finance & Business Analytics, 3.72 GPA"
+        ]
+      },
+      {
+        "head": "CTO, [Garnet Fund](https://www.garnetfund.org)",
+        "points": [
+          "Built the risk platform for USC's first student-run fund, a $100K+ long/short portfolio with 35+ members"
+        ]
+      },
+      {
+        "head": "President, Sigma Phi Epsilon (SC Alpha)",
+        "points": [
+          "Budget, recruitment and compliance for 230+ members, leading the campus in GPA and size"
+        ]
+      },
+      {
+        "head": "Alpha Fund Manager, Alpha Kappa Psi",
+        "points": [
+          "Ran a $23,000 portfolio with 12 analysts, up 12% over six months"
+        ]
+      }
     ]
   }
 }
