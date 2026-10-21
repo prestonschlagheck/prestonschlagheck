@@ -17,7 +17,7 @@ Shipping apps and AI products end to end. Currently Head of Product at [Mano Wel
   - Automated month-end close and forecasting. 10+ hours saved a week.
 - Co-founder & Lead Engineer, [Diffuse](https://www.diffuse.press)
   - AI newsroom on Next.js and Supabase. 26K monthly pageviews, profitable in 4 months.
-- Co-founder, [CogNodes](https://cognodes.com)
+- Co-founder & AI Strategy Consultant, [CogNodes](https://cognodes.com)
   - AI products for 8 paying clients.
 - Agentic AI Intern, [US HealthConnect](https://www.ushealthconnect.com)
   - 2 AI agents and 6 workflows. Turnaround down 35%.
