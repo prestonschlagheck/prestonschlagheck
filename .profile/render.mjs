@@ -21,10 +21,6 @@ const GAIN = { dark: '#00c805', light: '#00a804' };
 const LOSS = '#ff5000';
 
 const fmt = (n) => n.toLocaleString('en-US');
-// The best-day star, in GitHub's own gold for each theme so it sits with the rest of the page.
-const GOLD = { dark: '#e3b341', light: '#bf8700' };
-const star = (theme, size) =>
-	`<path fill="${GOLD[theme]}" transform="scale(${(size / 24).toFixed(4)})" d="M12 1.8l3.1 6.6 7.2.8-5.4 4.9 1.5 7.1L12 17.6l-6.4 3.6 1.5-7.1-5.4-4.9 7.2-.8z"/>`;
 // Width of a number set in tabular figures: generous, so a label placed after it never collides.
 const numWidth = (str, size, spacing) =>
 	[...str].reduce((w, c) => w + (/\d/.test(c) ? 0.62 : c === ',' ? 0.3 : c === '%' ? 0.9 : 0.62) * size + spacing, 0);
@@ -123,7 +119,6 @@ function ticker(theme, profile, cal) {
 	const kt = (sec) => +Math.min(1, Math.max(0, sec / T)).toFixed(5);
 	const sum = (a, b) => days.slice(Math.max(0, a), Math.max(0, b)).reduce((n, d) => n + d.count, 0);
 
-	const bestCount = Math.max(...days.map((d) => d.count));
 	const ranges = active.map((r, k) => {
 		const span = Math.min(r.days, days.length);
 		const start = days.length - span;
@@ -153,16 +148,7 @@ function ticker(theme, profile, cal) {
 			return { u, f, count, pct: pct === null ? null : Math.round((pct * count) / Math.max(1, total)), len: at(f, len) / L };
 		});
 		const d = 'M' + pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L');
-		// The best day sits inside a smoothing window, so the star goes over the highest point of
-		// the line within that window rather than over the raw day.
-		const bi = days.length - 1 - [...days].reverse().findIndex((d) => d.count === bestCount) - start;
-		let star = null;
-		if (bi >= 0) {
-			let hi = bi;
-			for (let i = Math.max(0, bi - r.smooth); i <= Math.min(pts.length - 1, bi + r.smooth); i++) if (pts[i][1] < pts[hi][1]) hi = i;
-			star = { x: pts[hi][0], y: pts[hi][1], f: pts[hi][0] / (W - 8) };
-		}
-		return { ...r, k, t0: k * slot, total, pct, d, frames, star };
+		return { ...r, k, t0: k * slot, total, pct, d, frames };
 	});
 
 	// Visible for its own slot only. Keyframes are nudged apart so no two land on the same time.
@@ -191,12 +177,6 @@ function ticker(theme, profile, cal) {
 			.join('');
 	};
 
-	const starMark = (r) => {
-		const { x, y, f } = r.star;
-		const a = r.t0 + (Math.acos(1 - 2 * Math.min(1, f)) / Math.PI) * DRAW;
-		return `<g transform="translate(${(x - 5.5).toFixed(1)} ${(y - 17).toFixed(1)})" opacity="${r.k === 0 ? 1 : 0}"><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${kt(a)};${kt(a + 0.35)};1" dur="${T}s" repeatCount="indefinite"/>${star(theme, 11)}</g>`;
-	};
-
 	const groups = ranges
 		.map((r) => {
 			const up = r.pct === null || r.pct >= 0;
@@ -217,7 +197,6 @@ function ticker(theme, profile, cal) {
 <circle r="4.5" fill="${gain}" cx="0" cy="0"><animateMotion dur="${T}s" repeatCount="indefinite" calcMode="linear" keyPoints="${motion.map((m) => m[1]).join(';')}" keyTimes="${motion.map((m) => kt(m[0])).join(';')}"><mpath href="#p${r.k}"/></animateMotion></circle>
 ${big}
 ${sub}
-${r.star ? starMark(r) : ''}
 </g>`;
 		})
 		.join('\n');
@@ -245,7 +224,7 @@ ${r.star ? starMark(r) : ''}
 	const level = (n) => (n === 0 ? 0 : n <= q(0.25) ? 1 : n <= q(0.5) ? 2 : n <= q(0.75) ? 3 : 4);
 	const shade = [0.008, 0.018, 0.03, 0.042, 0.06].map((o) => (theme === 'light' ? o * 0.8 : o));
 	const offset = new Date(recent[0].date + 'T00:00:00Z').getUTCDay();
-	// Cells fill in one at a time, top to bottom down each column, then the next column, keeping pace
+	// Cells fill in one at a time, bottom to top up each column, then the next column, keeping pace
 	// with the dot: cell i lights when the dot is i/N of the way across. The dot's position is eased
 	// (f = 0.5 - 0.5 cos(pi u)), so this inverts it to find the moment.
 	const cells = recent.length + offset;
@@ -258,7 +237,7 @@ ${r.star ? starMark(r) : ''}
 			// instead of cells popping on one by one. Fades out on an ease-in.
 			const keys = [[0, 0, '0 0 1 1']];
 			ranges.forEach((r) => {
-				const on = r.t0 + at(i + offset + 1) * DRAW - 0.35, out = r.t0 + DRAW + HOLD;
+				const on = r.t0 + at(col * 7 + (6 - row) + 1) * DRAW - 0.35, out = r.t0 + DRAW + HOLD;
 				keys.push([Math.max(on, keys.at(-1)[0] + 0.001), 0, '.25 .1 .25 1'], [Math.min(on + 0.9, out - 0.001), o, '0 0 1 1'], [out, o, '.4 0 1 1'], [out + FADE, 0, '0 0 1 1']);
 			});
 			keys.push([T, 0]);
@@ -273,7 +252,7 @@ ${r.star ? starMark(r) : ''}
 		['Daily Average, 90 Days', fmt(Math.round(days.slice(-90).reduce((n, d) => n + d.count, 0) / 90))],
 		['Best Day', fmt(s.best.count)],
 	]
-		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H + LIFT - 31}" font-size="12" fill="${t.muted}">${k}${k === 'Best Day' ? `<tspan dx="4" font-size="11" fill="${GOLD[theme]}">★</tspan>` : ''}</text><text x="${i * (W / 4)}" y="${H + LIFT - 6}" font-size="18" font-weight="600" fill="${t.ink}">${v}</text>`)
+		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H + LIFT - 31}" font-size="12" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H + LIFT - 6}" font-size="18" font-weight="600" fill="${t.ink}">${v}</text>`)
 		.join('');
 
 	const since = new Date(days[0].date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
