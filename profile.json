@@ -36,9 +36,9 @@
   ],
   "featured": [
     {
-      "repo": "prestonschlagheck/personademobuild",
-      "label": "Agentic iMessage onboarding",
-      "desc": "Voice + text agent in a browser iPhone"
+      "repo": "prestonschlagheck/agentic-imessage-demo",
+      "label": "Agentic iMessage demo",
+      "desc": "Texts, calls you, reads your Gmail"
     }
   ]
 }

@@ -289,6 +289,14 @@ ${sections}
 
 const profile = JSON.parse(await readFile('profile.json', 'utf8'));
 const cal = await calendar(LOGIN);
+// Lifetime contributions never go down. A lower count than the published chart means the token
+// can't see private contributions (the profile setting is off), so keep the published images.
+const published = await fetch(`${RAW}/ticker-dark.svg`).then((r) => (r.ok ? r.text() : '')).catch(() => '');
+const was = Number(published.match(/: ([\d,]+) GitHub contributions/)?.[1].replace(/,/g, '') ?? 0);
+if (cal.total < was) {
+	console.log(`Skipping: found ${fmt(cal.total)} contributions, below the ${fmt(was)} already published`);
+	process.exit(0);
+}
 await mkdir(OUT, { recursive: true });
 const so = profile.socials;
 for (const theme of Object.keys(THEMES)) {
