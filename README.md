@@ -33,4 +33,4 @@
 
 <br>
 
-<p><a href="https://github.com/prestonschlagheck/personademobuild"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/prestonschlagheck/prestonschlagheck/output/featured-1-dark.svg"><img alt="Agentic iMessage onboarding: Voice + text agent in a browser iPhone" src="https://raw.githubusercontent.com/prestonschlagheck/prestonschlagheck/output/featured-1-light.svg" height="32"></picture></a></p>
+<p><a href="https://github.com/prestonschlagheck/agentic-imessage-demo"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/prestonschlagheck/prestonschlagheck/output/featured-1-dark.svg"><img alt="Agentic iMessage demo: Texts, calls you, reads your Gmail" src="https://raw.githubusercontent.com/prestonschlagheck/prestonschlagheck/output/featured-1-light.svg" height="32"></picture></a></p>

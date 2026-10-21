@@ -30,6 +30,7 @@ jobs:
           LOGIN: ${{ github.repository_owner }}
           GITHUB_TOKEN: ${{ github.token }}
       - name: Publish images to the output branch
+        if: hashFiles('dist/ticker-dark.svg') != ''
         working-directory: dist
         env:
           GITHUB_TOKEN: ${{ github.token }}
