@@ -254,13 +254,16 @@ ${r.star ? starMark(r) : ''}
 		.map((d, i) => {
 			const col = Math.floor((i + offset) / 7), row = (i + offset) % 7;
 			const o = shade[level(d.count)];
-			const keys = [[0, 0]];
+			// Each cell eases in over most of a second, so a soft band of half-lit cells trails the dot
+			// instead of cells popping on one by one. Fades out on an ease-in.
+			const keys = [[0, 0, '0 0 1 1']];
 			ranges.forEach((r) => {
-				const on = r.t0 + at(i + offset + 1) * DRAW, out = r.t0 + DRAW + HOLD;
-				keys.push([Math.max(on - 0.001, keys.at(-1)[0] + 0.001), 0], [on + 0.25, o], [out, o], [out + FADE, 0]);
+				const on = r.t0 + at(i + offset + 1) * DRAW - 0.35, out = r.t0 + DRAW + HOLD;
+				keys.push([Math.max(on, keys.at(-1)[0] + 0.001), 0, '.25 .1 .25 1'], [Math.min(on + 0.9, out - 0.001), o, '0 0 1 1'], [out, o, '.4 0 1 1'], [out + FADE, 0, '0 0 1 1']);
 			});
 			keys.push([T, 0]);
-			return `<rect x="${(col * cw + 1.5).toFixed(1)}" y="${(gy + row * ch + 1.5).toFixed(1)}" width="${(cw - 3.5).toFixed(1)}" height="${(ch - 3.5).toFixed(1)}" rx="3" fill-opacity="${o}"><animate attributeName="fill-opacity" values="${keys.map((k) => k[1]).join(';')}" keyTimes="${keys.map((k) => kt(k[0])).join(';')}" dur="${T}s" repeatCount="indefinite"/></rect>`;
+			const splines = keys.slice(0, -1).map((k) => k[2]).join(';');
+			return `<rect x="${(col * cw + 1.5).toFixed(1)}" y="${(gy + row * ch + 1.5).toFixed(1)}" width="${(cw - 3.5).toFixed(1)}" height="${(ch - 3.5).toFixed(1)}" rx="3" fill-opacity="${o}"><animate attributeName="fill-opacity" values="${keys.map((k) => k[1]).join(';')}" keyTimes="${keys.map((k) => kt(k[0])).join(';')}" calcMode="spline" keySplines="${splines}" dur="${T}s" repeatCount="indefinite"/></rect>`;
 		})
 		.join('');
 	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom + 0.5}" r="1"/>`).join('');
