@@ -22,11 +22,11 @@ Shipping apps and AI products end to end. Currently Head of Product at [Mano Wel
 - Agentic AI Intern, [US HealthConnect](https://www.ushealthconnect.com)
   - 2 AI agents and 6 workflows. Turnaround down 35%.
 
-#### Education & leadership
+#### Education & Leadership
 
 - CTO, [Garnet Fund](https://www.garnetfund.org)
   - Built the risk platform for a $100K+ student-run fund.
-- University of South Carolina
+- B.S. Business Administration, [Darla Moore School of Business, University of South Carolina](https://sc.edu/study/colleges_schools/moore/)
   - Finance & Business Analytics, class of 2028. 3.72 GPA.
 - President, Sigma Phi Epsilon
   - 230+ members, first on campus in GPA and size.
