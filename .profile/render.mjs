@@ -96,11 +96,9 @@ function stats(days) {
 // Robinhood's stock page, played as a loop. For each range a dot draws the line left to right while
 // the count and the change against the period before tick up with it, then the next range starts.
 // Everything is SMIL on one shared clock, so it runs inside GitHub's <img> with no script.
-// Longest first, so the first thing a visitor sees is the biggest number. 1Y only appears once
-// there is more than a year of history to compare it against.
-// GitHub shows README images as plain pictures, so nothing in them can be clicked. One range,
-// drawn once on load, then it holds.
-const RANGES = [{ tab: '1Y', days: 365, smooth: 7, versus: 'vs previous year' }];
+// GitHub shows README images as plain pictures, so nothing in them can be clicked. One range, all
+// time, drawn once on load, then it holds. There is no earlier period to compare it against.
+const RANGES = [{ tab: 'All', days: Infinity, smooth: 7 }];
 const DRAW = 5, HOLD = 0.6; // seconds: the draw, then a beat before everything freezes
 const FRAMES = 110; // count updates per draw, about 26 a second
 
@@ -111,9 +109,10 @@ function ticker(theme, profile, cal) {
 	const { days } = cal;
 	const s = stats(days);
 	const slot = DRAW + HOLD;
-	const active = RANGES.filter((r) => r.days < 365 || days.length > 365);
+	const active = RANGES;
 	const T = slot * active.length;
 	const kt = (sec) => +Math.min(1, Math.max(0, sec / T)).toFixed(5);
+	const since = new Date(days[0].date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 	const sum = (a, b) => days.slice(Math.max(0, a), Math.max(0, b)).reduce((n, d) => n + d.count, 0);
 
 	const ranges = active.map((r, k) => {
@@ -200,7 +199,7 @@ function ticker(theme, profile, cal) {
 			const big = `<g class="big">${ticking(r, (fr) => `<text y="104">${fmt(fr.count)}</text>`)}</g>${sliding(r, (fr) => fr.count, (n) => numWidth(fmt(widest(n)), 44, -1) + 12, `<text y="104" class="lbl">contributions</text>`)}`;
 			const sub =
 				r.pct === null
-					? `<text x="0" y="138" font-size="14" fill="${t.muted}">Past ${r.days === 365 ? 'year' : `${r.days} days`}</text>`
+					? `<text x="0" y="138" font-size="14" fill="${t.muted}">Since ${since}</text>`
 					: `<g class="sub" fill="${tone}">${ticking(r, (fr) => `<text y="138">${up ? '+' : '−'}${fmt(Math.abs(fr.pct))}%</text>`)}</g>${sliding(r, (fr) => Math.abs(fr.pct), (n) => numWidth(`+${fmt(widest(n))}%`, 14, 0.6) + 7, `<text y="138" class="sub vs">${r.versus}</text>`)}`;
 			// The clip widens with x at a constant rate, and the dot rides the path to match it.
 			const keyPoints = r.frames.map((fr) => fr.len.toFixed(4));
@@ -215,10 +214,12 @@ ${sub}
 		})
 		.join('\n');
 
-	// The last year's contribution calendar, tone on tone behind the line: one cell per day, a
-	// column per week, filled by quartile like GitHub's own graph but barely there.
-	const weeks = 53, cw = W / weeks, ch = cw, gy = bottom - 12 - 7 * ch;
-	const recent = days.slice(-(weeks * 7 - (6 - new Date(days.at(-1).date + 'T00:00:00Z').getUTCDay())));
+	// The whole contribution calendar, tone on tone behind the line: one cell per day, a column per
+	// week, filled by quartile like GitHub's own graph but barely there. Cells shrink to fit every
+	// week since the first contribution across the width.
+	const recent = days;
+	const weeks = Math.ceil((recent.length + new Date(recent[0].date + 'T00:00:00Z').getUTCDay()) / 7);
+	const cw = W / weeks, ch = cw, gy = bottom - 12 - 7 * ch, gap = Math.min(3.5, cw * 0.21), rx = Math.min(3, cw * 0.18);
 	const nonzero = recent.map((d) => d.count).filter(Boolean).sort((a, b) => a - b);
 	const q = (f) => nonzero[Math.floor(f * (nonzero.length - 1))] ?? 1;
 	const level = (n) => (n === 0 ? 0 : n <= q(0.25) ? 1 : n <= q(0.5) ? 2 : n <= q(0.75) ? 3 : 4);
@@ -242,12 +243,12 @@ ${sub}
 			});
 			keys.push([T, o]);
 			const splines = keys.slice(0, -1).map((k) => k[2]).join(';');
-			return `<rect x="${(col * cw + 1.5).toFixed(1)}" y="${(gy + row * ch + 1.5).toFixed(1)}" width="${(cw - 3.5).toFixed(1)}" height="${(ch - 3.5).toFixed(1)}" rx="3" fill-opacity="${o}"><animate attributeName="fill-opacity" values="${keys.map((k) => k[1]).join(';')}" keyTimes="${keys.map((k) => kt(k[0])).join(';')}" calcMode="spline" keySplines="${splines}" dur="${T}s" repeatCount="indefinite"/></rect>`;
+			return `<rect x="${(col * cw + gap / 2).toFixed(1)}" y="${(gy + row * ch + gap / 2).toFixed(1)}" width="${(cw - gap).toFixed(1)}" height="${(ch - gap).toFixed(1)}" rx="${rx.toFixed(1)}" fill-opacity="${o}"><animate attributeName="fill-opacity" values="${keys.map((k) => k[1]).join(';')}" keyTimes="${keys.map((k) => kt(k[0])).join(';')}" calcMode="spline" keySplines="${splines}" dur="${T}s" repeatCount="indefinite"/></rect>`;
 		})
 		.join('');
 	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom + 0.5}" r="1"/>`).join('');
 	const statsRow = [
-		['All Time', fmt(cal.total)],
+		['Past Year', fmt(days.slice(-365).reduce((n, d) => n + d.count, 0))],
 		['Last 90 Days', fmt(days.slice(-90).reduce((n, d) => n + d.count, 0))],
 		['Daily Average, 90 Days', fmt(Math.round(days.slice(-90).reduce((n, d) => n + d.count, 0) / 90))],
 		['Best Day', fmt(s.best.count)],
@@ -255,8 +256,7 @@ ${sub}
 		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H + LIFT - 31}" font-size="12" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H + LIFT - 6}" font-size="18" font-weight="600" fill="${t.ink}">${v}</text>`)
 		.join('');
 
-	const since = new Date(days[0].date + 'T00:00:00Z').toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
-	const label = `${profile.fullName}: ${fmt(cal.total)} GitHub contributions since ${since}, ${fmt(ranges[0].total)} in the past ${ranges[0].tab === '1Y' ? 'year' : `${ranges[0].days} days`}`;
+	const label = `${profile.fullName}: ${fmt(cal.total)} GitHub contributions since ${since}`;
 	const body = `
 <style>.big{font-size:44px;font-weight:700;letter-spacing:-1px;fill:${t.ink};font-variant-numeric:tabular-nums}.lbl{font-size:15px;font-weight:400;letter-spacing:0;fill:${t.muted}}.sub{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}.vs{font-weight:400;fill:${t.muted}}</style>
 <g transform="translate(0 -${LIFT})">
