@@ -203,25 +203,30 @@ ${sub}
 		})
 		.join('\n');
 
-	// The whole contribution calendar, tone on tone behind the line: one cell per day, a column per
-	// week, filled by quartile like GitHub's own graph but barely there. Cells shrink to fit every
-	// week since the first contribution across the width.
-	const recent = days;
-	const weeks = Math.ceil((recent.length + new Date(recent[0].date + 'T00:00:00Z').getUTCDay()) / 7);
-	const cw = W / weeks, ch = cw, gy = bottom - 12 - 7 * ch, gap = Math.min(3.5, cw * 0.21), rx = Math.min(3, cw * 0.18);
+	// The contribution calendar, tone on tone behind the line: one cell per day, a column per week,
+	// filled by quartile like GitHub's own graph but barely there. Seven rows always span from the
+	// line's peak down to just above the baseline, and the cells stay square, so the row height sets
+	// how many weeks fit across. The most recent weeks are shown, ending at today on the right.
+	const ch = (bottom - 12 - top) / 7, gy = top;
+	const cols = Math.max(1, Math.round(W / ch)), cw = W / cols;
+	const gap = Math.min(3.5, cw * 0.21), rx = Math.min(3, cw * 0.18);
+	const today = new Date(days.at(-1).date + 'T00:00:00Z').getUTCDay();
+	const recent = days.slice(-Math.min(days.length, (cols - 1) * 7 + today + 1));
+	const offset = new Date(recent[0].date + 'T00:00:00Z').getUTCDay();
+	// With less history than fits, the weeks still end at the right edge.
+	const shift = cols - Math.ceil((recent.length + offset) / 7);
 	const nonzero = recent.map((d) => d.count).filter(Boolean).sort((a, b) => a - b);
 	const q = (f) => nonzero[Math.floor(f * (nonzero.length - 1))] ?? 1;
 	const level = (n) => (n === 0 ? 0 : n <= q(0.25) ? 1 : n <= q(0.5) ? 2 : n <= q(0.75) ? 3 : 4);
 	const shade = [0.008, 0.018, 0.03, 0.042, 0.06].map((o) => (theme === 'light' ? o * 0.8 : o));
-	const offset = new Date(recent[0].date + 'T00:00:00Z').getUTCDay();
 	// Cells fill in one at a time, bottom to top up each column, then the next column, keeping pace
 	// with the dot: cell i lights when the dot is i/N of the way across. The dot's position is eased
 	// (f = 0.5 - 0.5 cos(pi u)), so this inverts it to find the moment.
-	const cells = recent.length + offset;
+	const cells = cols * 7;
 	const at = (n) => Math.acos(1 - 2 * Math.min(1, n / cells)) / Math.PI;
 	const grid = recent
 		.map((d, i) => {
-			const col = Math.floor((i + offset) / 7), row = (i + offset) % 7;
+			const col = shift + Math.floor((i + offset) / 7), row = (i + offset) % 7;
 			const o = shade[level(d.count)];
 			// Each cell lights on its own, a tenth of a second after the dot reaches its spot, with a
 			// quick ease so the fill reads one box at a time right behind the dot.
