@@ -80,25 +80,15 @@ async function calendar(login) {
 	return { days: kept, total: kept.reduce((n, d) => n + d.count, 0) };
 }
 
-function stats(days) {
-	// The streak runs to today, or to yesterday when today has nothing yet.
-	let i = days.length - 1, streak = 0;
-	if (i >= 0 && days[i].count === 0) i--;
-	for (; i >= 0 && days[i].count > 0; i--) streak++;
-	let longest = 0, run = 0;
-	for (const d of days) longest = Math.max(longest, (run = d.count > 0 ? run + 1 : 0));
-	const best = days.reduce((a, d) => (d.count > a.count ? d : a), days[0]);
-	return { streak, longest, best, active: days.filter((d) => d.count > 0).length };
-}
-
 // ---- Ticker -----------------------------------------------------------------------------------
 
 // Robinhood's stock page, played as a loop. For each range a dot draws the line left to right while
 // the count and the change against the period before tick up with it, then the next range starts.
 // Everything is SMIL on one shared clock, so it runs inside GitHub's <img> with no script.
-// GitHub shows README images as plain pictures, so nothing in them can be clicked. One range, all
-// time, drawn once on load, then it holds. There is no earlier period to compare it against.
-const RANGES = [{ tab: 'All', days: Infinity, smooth: 7 }];
+// GitHub shows README images as plain pictures, so nothing in them can be clicked. One range, the
+// past 90 days, drawn once on load, then it holds. The change compares it with the 90 days before.
+// Longer timeframes sit in the stats row underneath.
+const RANGES = [{ tab: '3M', days: 90, smooth: 3, versus: 'vs the 90 days before' }];
 const DRAW = 5, HOLD = 0.6; // seconds: the draw, then a beat before everything freezes
 const FRAMES = 110; // count updates per draw, about 26 a second
 
@@ -107,7 +97,6 @@ function ticker(theme, profile, cal) {
 	const gain = GAIN[theme];
 	const W = 880, H = 308, top = 164, bottom = 290, LIFT = 62; // LIFT: header space freed by dropping the name
 	const { days } = cal;
-	const s = stats(days);
 	const slot = DRAW + HOLD;
 	const active = RANGES;
 	const T = slot * active.length;
@@ -196,10 +185,10 @@ function ticker(theme, profile, cal) {
 			// Digits are tabular, so the number's width only changes when it gains a digit. Each label
 			// sits just past the widest number with that many digits and glides one place right when
 			// the count gains a digit, instead of twitching with every frame.
-			const big = `<g class="big">${ticking(r, (fr) => `<text y="104">${fmt(fr.count)}</text>`)}</g>${sliding(r, (fr) => fr.count, (n) => numWidth(fmt(widest(n)), 44, -1) + 12, `<text y="104" class="lbl">contributions</text>`)}`;
+			const big = `<g class="big">${ticking(r, (fr) => `<text y="104">${fmt(fr.count)}</text>`)}</g>${sliding(r, (fr) => fr.count, (n) => numWidth(fmt(widest(n)), 44, -1) + 12, `<text y="104" class="lbl">contributions in the past 90 days</text>`)}`;
 			const sub =
 				r.pct === null
-					? `<text x="0" y="138" font-size="14" fill="${t.muted}">Since ${since}</text>`
+					? `<text x="0" y="138" font-size="14" fill="${t.muted}">Past 90 days</text>`
 					: `<g class="sub" fill="${tone}">${ticking(r, (fr) => `<text y="138">${up ? '+' : '−'}${fmt(Math.abs(fr.pct))}%</text>`)}</g>${sliding(r, (fr) => Math.abs(fr.pct), (n) => numWidth(`+${fmt(widest(n))}%`, 14, 0.6) + 7, `<text y="138" class="sub vs">${r.versus}</text>`)}`;
 			// The clip widens with x at a constant rate, and the dot rides the path to match it.
 			const keyPoints = r.frames.map((fr) => fr.len.toFixed(4));
@@ -214,44 +203,37 @@ ${sub}
 		})
 		.join('\n');
 
-	// The whole contribution calendar, tone on tone behind the line: one cell per day, a column per
-	// week, filled by quartile like GitHub's own graph but barely there. Cells shrink to fit every
-	// week since the first contribution across the width.
-	const recent = days;
-	const weeks = Math.ceil((recent.length + new Date(recent[0].date + 'T00:00:00Z').getUTCDay()) / 7);
-	const cw = W / weeks, ch = cw, gy = bottom - 12 - 7 * ch, gap = Math.min(3.5, cw * 0.21), rx = Math.min(3, cw * 0.18);
+	// The past 90 days as a strip of cells just under the baseline, tone on tone: one cell per day, lined
+	// up under the line's x positions, filled by quartile like GitHub's own graph but barely there.
+	const recent = days.slice(-Math.min(RANGES[0].days, days.length));
+	const n = recent.length, cw = W / n, gap = Math.min(2.5, cw * 0.24), size = cw - gap, rx = Math.min(2, size * 0.25);
+	const gy = bottom + 8;
 	const nonzero = recent.map((d) => d.count).filter(Boolean).sort((a, b) => a - b);
 	const q = (f) => nonzero[Math.floor(f * (nonzero.length - 1))] ?? 1;
-	const level = (n) => (n === 0 ? 0 : n <= q(0.25) ? 1 : n <= q(0.5) ? 2 : n <= q(0.75) ? 3 : 4);
-	const shade = [0.008, 0.018, 0.03, 0.042, 0.06].map((o) => (theme === 'light' ? o * 0.8 : o));
-	const offset = new Date(recent[0].date + 'T00:00:00Z').getUTCDay();
-	// Cells fill in one at a time, bottom to top up each column, then the next column, keeping pace
-	// with the dot: cell i lights when the dot is i/N of the way across. The dot's position is eased
-	// (f = 0.5 - 0.5 cos(pi u)), so this inverts it to find the moment.
-	const cells = recent.length + offset;
-	const at = (n) => Math.acos(1 - 2 * Math.min(1, n / cells)) / Math.PI;
+	const level = (c) => (c === 0 ? 0 : c <= q(0.25) ? 1 : c <= q(0.5) ? 2 : c <= q(0.75) ? 3 : 4);
+	const shade = [0.03, 0.07, 0.11, 0.16, 0.22].map((o) => (theme === 'light' ? o * 0.8 : o));
+	// Cells light one at a time, keeping pace with the dot: cell i lights when the dot is i/N of the
+	// way across. The dot's position is eased (f = 0.5 - 0.5 cos(pi u)), so this inverts it.
+	const at = (k) => Math.acos(1 - 2 * Math.min(1, k / n)) / Math.PI;
 	const grid = recent
 		.map((d, i) => {
-			const col = Math.floor((i + offset) / 7), row = (i + offset) % 7;
 			const o = shade[level(d.count)];
-			// Each cell lights on its own, a tenth of a second after the dot reaches its spot, with a
-			// quick ease so the fill reads one box at a time right behind the dot.
 			const keys = [[0, 0, '0 0 1 1']];
 			ranges.forEach((r) => {
-				const on = r.t0 + at(col * 7 + (6 - row) + 1) * DRAW + 0.1;
+				const on = r.t0 + at(i + 1) * DRAW + 0.1;
 				keys.push([Math.max(on, keys.at(-1)[0] + 0.001), 0, '.2 .6 .3 1'], [Math.min(on + 0.14, T - 0.001), o, '0 0 1 1']);
 			});
 			keys.push([T, o]);
 			const splines = keys.slice(0, -1).map((k) => k[2]).join(';');
-			return `<rect x="${(col * cw + gap / 2).toFixed(1)}" y="${(gy + row * ch + gap / 2).toFixed(1)}" width="${(cw - gap).toFixed(1)}" height="${(ch - gap).toFixed(1)}" rx="${rx.toFixed(1)}" fill-opacity="${o}"><animate attributeName="fill-opacity" values="${keys.map((k) => k[1]).join(';')}" keyTimes="${keys.map((k) => kt(k[0])).join(';')}" calcMode="spline" keySplines="${splines}" dur="${T}s" repeatCount="indefinite"/></rect>`;
+			return `<rect x="${(i * cw + gap / 2).toFixed(1)}" y="${gy.toFixed(1)}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" rx="${rx.toFixed(1)}" fill-opacity="${o}"><animate attributeName="fill-opacity" values="${keys.map((k) => k[1]).join(';')}" keyTimes="${keys.map((k) => kt(k[0])).join(';')}" calcMode="spline" keySplines="${splines}" dur="${T}s" repeatCount="indefinite"/></rect>`;
 		})
 		.join('');
 	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom + 0.5}" r="1"/>`).join('');
 	const statsRow = [
-		['Past Year', fmt(days.slice(-365).reduce((n, d) => n + d.count, 0))],
-		['Last 90 Days', fmt(days.slice(-90).reduce((n, d) => n + d.count, 0))],
-		['Daily Average, 90 Days', fmt(Math.round(days.slice(-90).reduce((n, d) => n + d.count, 0) / 90))],
-		['Best Day', fmt(s.best.count)],
+		['Past 30 Days', fmt(sum(days.length - 30, days.length))],
+		['Past 6 Months', fmt(sum(days.length - 182, days.length))],
+		['Past Year', fmt(sum(days.length - 365, days.length))],
+		[`All Time, Since ${since}`, fmt(cal.total)],
 	]
 		.map(([k, v], i) => `<text x="${i * (W / 4)}" y="${H + LIFT - 31}" font-size="12" fill="${t.muted}">${k}</text><text x="${i * (W / 4)}" y="${H + LIFT - 6}" font-size="18" font-weight="600" fill="${t.ink}">${v}</text>`)
 		.join('');
