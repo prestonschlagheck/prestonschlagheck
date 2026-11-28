@@ -203,29 +203,36 @@ ${sub}
 		})
 		.join('\n');
 
-	// The past 90 days as a strip of cells just under the baseline, tone on tone: one cell per day, lined
-	// up under the line's x positions, filled by quartile like GitHub's own graph but barely there.
-	const recent = days.slice(-Math.min(RANGES[0].days, days.length));
-	const n = recent.length, cw = W / n, gap = Math.min(2.5, cw * 0.24), size = cw - gap, rx = Math.min(2, size * 0.25);
-	const gy = bottom + 8;
+	// The whole contribution calendar, tone on tone behind the line: one cell per day, a column per
+	// week, filled by quartile like GitHub's own graph but barely there. Cells shrink to fit every
+	// week since the first contribution across the width.
+	const recent = days;
+	const weeks = Math.ceil((recent.length + new Date(recent[0].date + 'T00:00:00Z').getUTCDay()) / 7);
+	const cw = W / weeks, ch = cw, gy = bottom - 12 - 7 * ch, gap = Math.min(3.5, cw * 0.21), rx = Math.min(3, cw * 0.18);
 	const nonzero = recent.map((d) => d.count).filter(Boolean).sort((a, b) => a - b);
 	const q = (f) => nonzero[Math.floor(f * (nonzero.length - 1))] ?? 1;
-	const level = (c) => (c === 0 ? 0 : c <= q(0.25) ? 1 : c <= q(0.5) ? 2 : c <= q(0.75) ? 3 : 4);
-	const shade = [0.03, 0.07, 0.11, 0.16, 0.22].map((o) => (theme === 'light' ? o * 0.8 : o));
-	// Cells light one at a time, keeping pace with the dot: cell i lights when the dot is i/N of the
-	// way across. The dot's position is eased (f = 0.5 - 0.5 cos(pi u)), so this inverts it.
-	const at = (k) => Math.acos(1 - 2 * Math.min(1, k / n)) / Math.PI;
+	const level = (n) => (n === 0 ? 0 : n <= q(0.25) ? 1 : n <= q(0.5) ? 2 : n <= q(0.75) ? 3 : 4);
+	const shade = [0.008, 0.018, 0.03, 0.042, 0.06].map((o) => (theme === 'light' ? o * 0.8 : o));
+	const offset = new Date(recent[0].date + 'T00:00:00Z').getUTCDay();
+	// Cells fill in one at a time, bottom to top up each column, then the next column, keeping pace
+	// with the dot: cell i lights when the dot is i/N of the way across. The dot's position is eased
+	// (f = 0.5 - 0.5 cos(pi u)), so this inverts it to find the moment.
+	const cells = recent.length + offset;
+	const at = (n) => Math.acos(1 - 2 * Math.min(1, n / cells)) / Math.PI;
 	const grid = recent
 		.map((d, i) => {
+			const col = Math.floor((i + offset) / 7), row = (i + offset) % 7;
 			const o = shade[level(d.count)];
+			// Each cell lights on its own, a tenth of a second after the dot reaches its spot, with a
+			// quick ease so the fill reads one box at a time right behind the dot.
 			const keys = [[0, 0, '0 0 1 1']];
 			ranges.forEach((r) => {
-				const on = r.t0 + at(i + 1) * DRAW + 0.1;
+				const on = r.t0 + at(col * 7 + (6 - row) + 1) * DRAW + 0.1;
 				keys.push([Math.max(on, keys.at(-1)[0] + 0.001), 0, '.2 .6 .3 1'], [Math.min(on + 0.14, T - 0.001), o, '0 0 1 1']);
 			});
 			keys.push([T, o]);
 			const splines = keys.slice(0, -1).map((k) => k[2]).join(';');
-			return `<rect x="${(i * cw + gap / 2).toFixed(1)}" y="${gy.toFixed(1)}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" rx="${rx.toFixed(1)}" fill-opacity="${o}"><animate attributeName="fill-opacity" values="${keys.map((k) => k[1]).join(';')}" keyTimes="${keys.map((k) => kt(k[0])).join(';')}" calcMode="spline" keySplines="${splines}" dur="${T}s" repeatCount="indefinite"/></rect>`;
+			return `<rect x="${(col * cw + gap / 2).toFixed(1)}" y="${(gy + row * ch + gap / 2).toFixed(1)}" width="${(cw - gap).toFixed(1)}" height="${(ch - gap).toFixed(1)}" rx="${rx.toFixed(1)}" fill-opacity="${o}"><animate attributeName="fill-opacity" values="${keys.map((k) => k[1]).join(';')}" keyTimes="${keys.map((k) => kt(k[0])).join(';')}" calcMode="spline" keySplines="${splines}" dur="${T}s" repeatCount="indefinite"/></rect>`;
 		})
 		.join('');
 	const dots = Array.from({ length: Math.floor(W / 7) }, (_, k) => `<circle cx="${(k * 7 + 3.5).toFixed(1)}" cy="${bottom + 0.5}" r="1"/>`).join('');
